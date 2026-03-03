@@ -1,19 +1,22 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sadar/pages/signup_page.dart';
+import 'package:sadar/screens/dashboard.dart';
 
 // ─────────────────────────────────────────
 // Color Constants
 // ─────────────────────────────────────────
 class _C {
-  static const bg            = Color(0xFF060E1D);
-  static const bluePrimary   = Color(0xFF1A56DB);
-  static const blueLight     = Color(0xFF3B82F6);
-  static const green         = Color(0xFF10B981);
-  static const textPrimary   = Color(0xFFF0F4FF);
+  static const bg = Color(0xFF060E1D);
+  static const bluePrimary = Color(0xFF1A56DB);
+  static const blueLight = Color(0xFF3B82F6);
+  static const green = Color(0xFF10B981);
+  static const textPrimary = Color(0xFFF0F4FF);
   static const textSecondary = Color(0xFF8DA0C4);
-  static const textMuted     = Color(0xFF4A6080);
-  static const cardBg        = Color(0xB30F2347);
-  static const border        = Color(0x263B82F6);
+  static const textMuted = Color(0xFF4A6080);
+  static const cardBg = Color(0xB30F2347);
+  static const border = Color(0x263B82F6);
 }
 
 // ─────────────────────────────────────────
@@ -26,11 +29,7 @@ class LoginScreen extends StatefulWidget {
   /// Called after successful login
   final VoidCallback? onLoginSuccess;
 
-  const LoginScreen({
-    super.key,
-    this.onNavigateToSignUp,
-    this.onLoginSuccess,
-  });
+  const LoginScreen({super.key, this.onNavigateToSignUp, this.onLoginSuccess});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -38,11 +37,11 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with TickerProviderStateMixin {
-  final _emailCtrl    = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  bool  _obscurePass  = true;
-  bool  _rememberMe   = true;
-  bool  _isLoading    = false;
+  bool _obscurePass = true;
+  bool _rememberMe = true;
+  final bool _isLoading = false;
 
   late AnimationController _fadeCtrl;
   late List<Animation<double>> _anims;
@@ -51,7 +50,9 @@ class _LoginScreenState extends State<LoginScreen>
   void initState() {
     super.initState();
     _fadeCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1000));
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
     _anims = List.generate(7, (i) {
       final s = (i * 0.1).clamp(0.0, 1.0);
       return CurvedAnimation(
@@ -72,22 +73,20 @@ class _LoginScreenState extends State<LoginScreen>
 
   // Staggered fade + slide helper
   Widget _fs(int i, Widget child) => FadeTransition(
-        opacity: _anims[i],
-        child: SlideTransition(
-          position: Tween(begin: const Offset(0, 0.18), end: Offset.zero)
-              .animate(_anims[i]),
-          child: child,
-        ),
-      );
+    opacity: _anims[i],
+    child: SlideTransition(
+      position: Tween(
+        begin: const Offset(0, 0.18),
+        end: Offset.zero,
+      ).animate(_anims[i]),
+      child: child,
+    ),
+  );
 
-  Future<void> _handleLogin() async {
-    HapticFeedback.mediumImpact();
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 1600));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      widget.onLoginSuccess?.call();
-    }
+  void _handleLogin() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const DashboardScreen()));
   }
 
   @override
@@ -95,97 +94,110 @@ class _LoginScreenState extends State<LoginScreen>
     return Scaffold(
       backgroundColor: _C.bg,
       resizeToAvoidBottomInset: true,
-      body: Stack(children: [
-        // ── Ambient glows ────────────────────
-        Positioned(
-          top: -100, right: -80,
-          child: _Glow(color: _C.bluePrimary, size: 320, opacity: 0.14),
-        ),
-        Positioned(
-          bottom: 80, left: -80,
-          child: _Glow(color: _C.green, size: 240, opacity: 0.07),
-        ),
+      body: Stack(
+        children: [
+          // ── Ambient glows ────────────────────
+          Positioned(
+            top: -100,
+            right: -80,
+            child: _Glow(color: _C.bluePrimary, size: 320, opacity: 0.14),
+          ),
+          Positioned(
+            bottom: 80,
+            left: -80,
+            child: _Glow(color: _C.green, size: 240, opacity: 0.07),
+          ),
 
-        SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 32),
+          SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 32),
 
-                // ── Brand row ────────────────
-                _fs(0, _buildBrandRow()),
-                const SizedBox(height: 36),
+                  // ── Brand row ────────────────
+                  _fs(0, _buildBrandRow()),
+                  const SizedBox(height: 36),
 
-                // ── Welcome text ─────────────
-                _fs(1, _buildWelcomeText()),
-                const SizedBox(height: 32),
+                  // ── Welcome text ─────────────
+                  _fs(1, _buildWelcomeText()),
+                  const SizedBox(height: 32),
 
-                // ── Email field ──────────────
-                _fs(2, _InputField(
-                  controller: _emailCtrl,
-                  label: 'Email Address',
-                  hint: 'you@example.com',
-                  icon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                )),
-                const SizedBox(height: 14),
+                  // ── Email field ──────────────
+                  _fs(
+                    2,
+                    _InputField(
+                      controller: _emailCtrl,
+                      label: 'Email Address',
+                      hint: 'you@example.com',
+                      icon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
 
-                // ── Password field ───────────
-                _fs(2, _InputField(
-                  controller: _passwordCtrl,
-                  label: 'Password',
-                  hint: '••••••••',
-                  icon: Icons.lock_outline_rounded,
-                  obscure: _obscurePass,
-                  suffix: GestureDetector(
-                    onTap: () =>
-                        setState(() => _obscurePass = !_obscurePass),
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 14),
-                      child: Icon(
-                        _obscurePass
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: _C.textMuted,
-                        size: 20,
+                  // ── Password field ───────────
+                  _fs(
+                    2,
+                    _InputField(
+                      controller: _passwordCtrl,
+                      label: 'Password',
+                      hint: '••••••••',
+                      icon: Icons.lock_outline_rounded,
+                      obscure: _obscurePass,
+                      suffix: GestureDetector(
+                        onTap: () =>
+                            setState(() => _obscurePass = !_obscurePass),
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 14),
+                          child: Icon(
+                            _obscurePass
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: _C.textMuted,
+                            size: 20,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                )),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // ── Remember me + Forgot ─────
-                _fs(3, _buildRememberRow()),
-                const SizedBox(height: 28),
+                  // ── Remember me + Forgot ─────
+                  _fs(3, _buildRememberRow()),
+                  const SizedBox(height: 28),
 
-                // ── Login button ─────────────
-                _fs(4, _PrimaryButton(
-                  label: 'Sign In',
-                  icon: Icons.login_rounded,
-                  isLoading: _isLoading,
-                  onTap: _handleLogin,
-                )),
-                const SizedBox(height: 24),
+                  // ── Login button ─────────────
+                  _fs(
+                    4,
+                    _PrimaryButton(
+                      label: 'Sign In',
+                      icon: Icons.login_rounded,
+                      isLoading: _isLoading,
+                      onTap: _handleLogin,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
-                // ── Or divider ───────────────
-                _fs(4, const _OrDivider()),
-                const SizedBox(height: 22),
+                  // ── Or divider ───────────────
+                  _fs(4, const _OrDivider()),
+                  const SizedBox(height: 22),
 
-                // ── Social buttons ───────────
-                _fs(5, _buildSocialRow()),
-                const SizedBox(height: 36),
+                  // ── Social buttons ───────────
+                  _fs(5, _buildSocialRow()),
+                  const SizedBox(height: 36),
 
-                // ── Sign up link ─────────────
-                _fs(6, _buildSignUpLink()),
-                const SizedBox(height: 32),
-              ],
+                  // ── Sign up link ─────────────
+                  _fs(6, _buildSignUpLink()),
+                  const SizedBox(height: 32),
+                ],
+              ),
             ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 
@@ -195,39 +207,49 @@ class _LoginScreenState extends State<LoginScreen>
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         // Logo + name
-        Row(children: [
-          Container(
-            width: 38, height: 38,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_C.bluePrimary, _C.blueLight],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
+        Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [_C.bluePrimary, _C.blueLight],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
                     color: _C.bluePrimary.withValues(alpha: 0.4),
                     blurRadius: 12,
-                    offset: const Offset(0, 4)),
-              ],
-            ),
-            child: const Center(
-              child: Text('S',
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Text(
+                  'S',
                   style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white)),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: 9),
-          const Text('SADAR',
+            const SizedBox(width: 9),
+            const Text(
+              'SADAR',
               style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: _C.textPrimary,
-                  letterSpacing: 1)),
-        ]),
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: _C.textPrimary,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
 
         // System online pill
         _SystemOnlinePill(),
@@ -240,19 +262,21 @@ class _LoginScreenState extends State<LoginScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Welcome back',
-            style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: _C.textPrimary,
-                letterSpacing: -0.5,
-                height: 1.1)),
+        const Text(
+          'Welcome back',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            color: _C.textPrimary,
+            letterSpacing: -0.5,
+            height: 1.1,
+          ),
+        ),
         const SizedBox(height: 6),
-        const Text('Sign in to your SADAR account to\ncontinue monitoring.',
-            style: TextStyle(
-                fontSize: 13,
-                color: _C.textSecondary,
-                height: 1.55)),
+        const Text(
+          'Sign in to your SADAR account to\ncontinue monitoring.',
+          style: TextStyle(fontSize: 13, color: _C.textSecondary, height: 1.55),
+        ),
       ],
     );
   }
@@ -264,38 +288,50 @@ class _LoginScreenState extends State<LoginScreen>
       children: [
         GestureDetector(
           onTap: () => setState(() => _rememberMe = !_rememberMe),
-          child: Row(children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 20, height: 20,
-              decoration: BoxDecoration(
-                color: _rememberMe ? _C.bluePrimary : Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: _rememberMe ? _C.bluePrimary : _C.textMuted,
-                  width: 1.5,
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: _rememberMe ? _C.bluePrimary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: _rememberMe ? _C.bluePrimary : _C.textMuted,
+                    width: 1.5,
+                  ),
+                ),
+                child: _rememberMe
+                    ? const Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 13,
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 9),
+              const Text(
+                'Remember me',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: _C.textSecondary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              child: _rememberMe
-                  ? const Icon(Icons.check_rounded,
-                      color: Colors.white, size: 13)
-                  : null,
-            ),
-            const SizedBox(width: 9),
-            const Text('Remember me',
-                style: TextStyle(
-                    fontSize: 12,
-                    color: _C.textSecondary,
-                    fontWeight: FontWeight.w500)),
-          ]),
+            ],
+          ),
         ),
         GestureDetector(
           onTap: () => HapticFeedback.lightImpact(),
-          child: const Text('Forgot password?',
-              style: TextStyle(
-                  fontSize: 12,
-                  color: _C.blueLight,
-                  fontWeight: FontWeight.w600)),
+          child: const Text(
+            'Forgot password?',
+            style: TextStyle(
+              fontSize: 12,
+              color: _C.blueLight,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ],
     );
@@ -303,11 +339,17 @@ class _LoginScreenState extends State<LoginScreen>
 
   // ── Social Row ───────────────────────────
   Widget _buildSocialRow() {
-    return Row(children: [
-      Expanded(child: _SocialButton(label: 'Google', emoji: '🌐')),
-      const SizedBox(width: 12),
-      Expanded(child: _SocialButton(label: 'Apple',  emoji: '🍎')),
-    ]);
+    return Row(
+      children: [
+        Expanded(
+          child: _SocialButton(label: 'Google', emoji: '🌐'),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _SocialButton(label: 'Apple', emoji: '🍎'),
+        ),
+      ],
+    );
   }
 
   // ── Sign Up Link ─────────────────────────
@@ -316,14 +358,22 @@ class _LoginScreenState extends State<LoginScreen>
       child: GestureDetector(
         onTap: widget.onNavigateToSignUp,
         child: RichText(
-          text: const TextSpan(
-            style: TextStyle(fontSize: 13, color: _C.textSecondary),
+          text: TextSpan(
+            style: TextStyle(color: Colors.white),
             children: [
-              TextSpan(text: "Don't have an account? "),
+              const TextSpan(text: "Don't have an account? "),
               TextSpan(
                 text: 'Sign Up',
                 style: TextStyle(
-                    color: _C.blueLight, fontWeight: FontWeight.w700),
+                  color: _C.blueLight,
+                  fontWeight: FontWeight.w700,
+                ),
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                    );
+                  },
               ),
             ],
           ),
@@ -341,19 +391,22 @@ class _LoginScreenState extends State<LoginScreen>
 class _Glow extends StatelessWidget {
   final Color color;
   final double size, opacity;
-  const _Glow(
-      {required this.color, required this.size, required this.opacity});
+  const _Glow({required this.color, required this.size, required this.opacity});
 
   @override
   Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-              colors: [color.withValues(alpha: opacity), Colors.transparent]),
-        ),
-      );
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: RadialGradient(
+        colors: [
+          color.withValues(alpha: opacity),
+          Colors.transparent,
+        ],
+      ),
+    ),
+  );
 }
 
 // System online animated pill
@@ -370,8 +423,9 @@ class _SystemOnlinePillState extends State<_SystemOnlinePill>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1200))
-      ..repeat(reverse: true);
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
   }
 
   @override
@@ -389,23 +443,31 @@ class _SystemOnlinePillState extends State<_SystemOnlinePill>
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _C.green.withValues(alpha: 0.3)),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        FadeTransition(
-          opacity:
-              Tween<double>(begin: 1.0, end: 0.3).animate(_ctrl),
-          child: Container(
-            width: 6, height: 6,
-            decoration: const BoxDecoration(
-                color: _C.green, shape: BoxShape.circle),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FadeTransition(
+            opacity: Tween<double>(begin: 1.0, end: 0.3).animate(_ctrl),
+            child: Container(
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(
+                color: _C.green,
+                shape: BoxShape.circle,
+              ),
+            ),
           ),
-        ),
-        const SizedBox(width: 6),
-        const Text('System Online',
+          const SizedBox(width: 6),
+          const Text(
+            'System Online',
             style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: _C.green)),
-      ]),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: _C.green,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -441,12 +503,15 @@ class _InputFieldState extends State<_InputField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(widget.label,
-            style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: _C.textSecondary,
-                letterSpacing: 0.3)),
+        Text(
+          widget.label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: _C.textSecondary,
+            letterSpacing: 0.3,
+          ),
+        ),
         const SizedBox(height: 7),
         Focus(
           onFocusChange: (v) => setState(() => _focused = v),
@@ -465,33 +530,40 @@ class _InputFieldState extends State<_InputField> {
                 width: _focused ? 1.5 : 1,
               ),
             ),
-            child: Row(children: [
-              const SizedBox(width: 14),
-              Icon(widget.icon,
+            child: Row(
+              children: [
+                const SizedBox(width: 14),
+                Icon(
+                  widget.icon,
                   color: _focused ? _C.blueLight : _C.textMuted,
-                  size: 19),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  controller: widget.controller,
-                  keyboardType: widget.keyboardType,
-                  obscureText: widget.obscure,
-                  style: const TextStyle(
+                  size: 19,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: widget.controller,
+                    keyboardType: widget.keyboardType,
+                    obscureText: widget.obscure,
+                    style: const TextStyle(
                       fontSize: 14,
                       color: _C.textPrimary,
-                      fontWeight: FontWeight.w500),
-                  cursorColor: _C.blueLight,
-                  decoration: InputDecoration(
-                    hintText: widget.hint,
-                    hintStyle: const TextStyle(
-                        fontSize: 13, color: _C.textMuted),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    cursorColor: _C.blueLight,
+                    decoration: InputDecoration(
+                      hintText: widget.hint,
+                      hintStyle: const TextStyle(
+                        fontSize: 13,
+                        color: _C.textMuted,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
                 ),
-              ),
-              if (widget.suffix != null) widget.suffix!,
-            ]),
+                if (widget.suffix != null) widget.suffix!,
+              ],
+            ),
           ),
         ),
       ],
@@ -528,27 +600,38 @@ class _PrimaryButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: _C.bluePrimary.withValues(alpha: 0.38),
-                blurRadius: 20,
-                offset: const Offset(0, 8)),
+              color: _C.bluePrimary.withValues(alpha: 0.38),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
           ],
         ),
         child: Center(
           child: isLoading
               ? const SizedBox(
-                  width: 22, height: 22,
+                  width: 22,
+                  height: 22,
                   child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2.5))
-              : Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(icon, color: Colors.white, size: 20),
-                  const SizedBox(width: 10),
-                  Text(label,
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
+                    Text(
+                      label,
                       style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: -0.1)),
-                ]),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );
@@ -561,18 +644,23 @@ class _OrDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      Expanded(child: Divider(color: _C.border, thickness: 1)),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        child: Text('or continue with',
+    return Row(
+      children: [
+        Expanded(child: Divider(color: _C.border, thickness: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Text(
+            'or continue with',
             style: TextStyle(
-                fontSize: 11,
-                color: _C.textMuted,
-                fontWeight: FontWeight.w500)),
-      ),
-      Expanded(child: Divider(color: _C.border, thickness: 1)),
-    ]);
+              fontSize: 11,
+              color: _C.textMuted,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: _C.border, thickness: 1)),
+      ],
+    );
   }
 }
 
@@ -592,15 +680,21 @@ class _SocialButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: _C.border),
         ),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(emoji, style: const TextStyle(fontSize: 17)),
-          const SizedBox(width: 8),
-          Text(label,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 17)),
+            const SizedBox(width: 8),
+            Text(
+              label,
               style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: _C.textSecondary)),
-        ]),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _C.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
