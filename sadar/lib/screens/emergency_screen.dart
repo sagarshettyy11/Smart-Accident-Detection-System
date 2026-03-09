@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sadar/services/firestore_service.dart';
 
 // ─────────────────────────────────────────
 // Color Constants
@@ -31,6 +32,7 @@ class EmergencyContact {
   final int priority;
   final Color priorityColor;
   bool notifyOnSOS;
+  String? firestoreId;
 
   EmergencyContact({
     required this.name,
@@ -41,6 +43,7 @@ class EmergencyContact {
     required this.priority,
     required this.priorityColor,
     this.notifyOnSOS = true,
+    this.firestoreId,
   });
 }
 
@@ -65,35 +68,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
   late AnimationController _fadeCtrl;
   late List<Animation<double>> _anims;
 
-  final List<EmergencyContact> _contacts = [
-    EmergencyContact(
-      name: 'Sarah Ahmed',
-      relation: 'Spouse · Primary Contact',
-      phone: '+1 (555) 020-1110',
-      emoji: '👩',
-      avatarColor: const Color(0xFFEF4444),
-      priority: 1,
-      priorityColor: _C.red,
-    ),
-    EmergencyContact(
-      name: 'Dr. James R.',
-      relation: 'Family Doctor',
-      phone: '+1 (555) 030-2220',
-      emoji: '👨',
-      avatarColor: const Color(0xFFF59E0B),
-      priority: 2,
-      priorityColor: _C.amber,
-    ),
-    EmergencyContact(
-      name: 'Michael Lee',
-      relation: 'Neighbour · Nearby Responder',
-      phone: '+1 (555) 040-3330',
-      emoji: '👨‍⚕️',
-      avatarColor: const Color(0xFF8B5CF6),
-      priority: 3,
-      priorityColor: _C.purple,
-    ),
-  ];
+  final List<EmergencyContact> _contacts = [];
 
   List<EmergencyContact> get _filtered => _searchQuery.isEmpty
       ? _contacts
@@ -123,6 +98,34 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
     _searchCtrl.addListener(
       () => setState(() => _searchQuery = _searchCtrl.text),
     );
+    _loadContacts();
+  }
+
+  Future<void> _loadContacts() async {
+    try {
+      final data = await FirestoreService.getEmergencyContacts();
+      final colors = [_C.red, _C.amber, _C.purple, _C.blueLight, _C.green];
+      final emojis = ['👩', '👨', '👧', '👦', '🧑'];
+      if (mounted) {
+        setState(() {
+          _contacts.clear();
+          for (var i = 0; i < data.length; i++) {
+            _contacts.add(EmergencyContact(
+              name: data[i]['name'] as String? ?? '',
+              relation: data[i]['relationship'] as String? ?? 'Contact',
+              phone: data[i]['phone'] as String? ?? '',
+              emoji: emojis[i % emojis.length],
+              avatarColor: colors[i % colors.length],
+              priority: i + 1,
+              priorityColor: colors[i % colors.length],
+              firestoreId: data[i]['id'] as String?,
+            ));
+          }
+        });
+      }
+    } catch (e) {
+      // Contacts loading failed silently
+    }
   }
 
   @override
@@ -810,8 +813,18 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
               ),
               const SizedBox(height: 20),
               GestureDetector(
-                onTap: () {
+                onTap: () async {
                   if (nameCtrl.text.isNotEmpty && phoneCtrl.text.isNotEmpty) {
+                    // Save to Firestore
+                    try {
+                      await FirestoreService.addEmergencyContact({
+                        'name': nameCtrl.text,
+                        'phone': phoneCtrl.text,
+                        'relationship': relCtrl.text.isNotEmpty
+                            ? relCtrl.text
+                            : 'Contact',
+                      });
+                    } catch (_) {}
                     setState(() {
                       _contacts.add(
                         EmergencyContact(
@@ -827,8 +840,10 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
                         ),
                       );
                     });
-                    Navigator.pop(context);
+                    if (context.mounted) Navigator.pop(context);
                     HapticFeedback.mediumImpact();
+                    // Reload from Firestore to get proper IDs
+                    _loadContacts();
                   }
                 },
                 child: Container(

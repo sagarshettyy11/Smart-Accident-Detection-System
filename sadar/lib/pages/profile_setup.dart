@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sadar/pages/contacts_setup.dart';
+import 'package:sadar/services/firestore_service.dart';
 
 // ─────────────────────────────────────────
 // Color Constants
@@ -55,7 +56,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
   final _yearCtrl = TextEditingController();
   String? _selectedCarColour;
 
-  final bool _isLoading = false;
+  bool _isLoading = false;
 
   late AnimationController _fadeCtrl;
   late List<Animation<double>> _anims;
@@ -116,10 +117,58 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     ),
   );
 
-  void _handleContinue() {
-    Navigator.of(context).push(
+  String _getInitials() {
+    final name = _firstNameCtrl.text.trim();
+    if (name.isEmpty) return '?';
+    return name
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .take(2)
+        .map((w) => w[0])
+        .join()
+        .toUpperCase();
+  }
+
+  Future<void> _handleContinue() async {
+    setState(() => _isLoading = true);
+
+    // Attempt to save profile data (best-effort — navigate even if it fails)
+    try {
+      await FirestoreService.saveUserProfile({
+        'full_name': _firstNameCtrl.text.trim(),
+        'dob': _dobCtrl.text.trim(),
+        'gender': _selectedGender,
+        'blood_group': _selectedBloodGroup,
+        'national_id': _nationalIdCtrl.text.trim(),
+        'address': _addressCtrl.text.trim(),
+        'medical_conditions': _medicalCtrl.text.trim(),
+        'allergies': _allergiesCtrl.text.trim(),
+      });
+    } catch (e) {
+      debugPrint('Profile save failed (non-fatal): $e');
+    }
+
+    // Attempt to save vehicle data (best-effort)
+    try {
+      if (_carModelCtrl.text.trim().isNotEmpty) {
+        await FirestoreService.saveVehicle({
+          'car_model': _carModelCtrl.text.trim(),
+          'licence_number': _licenceCtrl.text.trim(),
+          'rc_number': _rcCtrl.text.trim(),
+          'car_colour': _selectedCarColour,
+          'year': _yearCtrl.text.trim(),
+        });
+      }
+    } catch (e) {
+      debugPrint('Vehicle save failed (non-fatal): $e');
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => const ContactsSetupScreen(), // or ProfileSetupScreen()
+        builder: (_) => const ContactsSetupScreen(),
       ),
     );
   }
@@ -521,10 +570,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                     ),
                   ],
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    'AK',
-                    style: TextStyle(
+                    _getInitials(),
+                    style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,

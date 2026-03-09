@@ -1,4 +1,64 @@
-# Miscellaneous
+# ─── Python ───────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.pdb
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env_dir/
+
+# Distribution / packaging
+dist/
+*.egg-info/
+.eggs/
+
+# ─── Environment Variables & Secrets ──────────────────
+.env
+.env.*
+.env.local
+.env.production
+*.env
+
+# ─── Firebase Config (contains API keys) ─────────────
+google-services.json
+GoogleService-Info.plist
+
+# ─── ML Model Weights (large binary files) ────────────
+*.pt
+*.pth
+*.weights
+
+# ─── IDE / Editor ─────────────────────────────────────
+.vscode/
+.idea/
+*.iml
+*.suo
+*.user
+*.sln.docstates
+
+# ─── Operating System ─────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Logs ─────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Crash / profiling dumps ──────────────────────────
+crash.log
+crash.*.log
+
+# ─── Miscellaneous ────────────────────────────────────
+
+
 *.class
 *.lock
 *.log

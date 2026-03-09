@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sadar/pages/profile_setup.dart';
+import 'package:sadar/services/firebase_auth_service.dart';
 
 // ─────────────────────────────────────────
 // Color Constants
@@ -45,7 +49,7 @@ class _SignUpScreenState extends State<SignUpScreen>
   bool _obscurePass = true;
   bool _obscureConfirm = true;
   bool _agreedToTerms = false;
-  final bool _isLoading = false;
+  bool _isLoading = false;
 
   late AnimationController _fadeCtrl;
   late List<Animation<double>> _anims;
@@ -58,7 +62,7 @@ class _SignUpScreenState extends State<SignUpScreen>
     if (p.length >= 8) s += 0.25;
     if (p.contains(RegExp(r'[A-Z]'))) s += 0.25;
     if (p.contains(RegExp(r'[0-9]'))) s += 0.25;
-    if (p.contains(RegExp(r'[!@#\$&*~_\-]'))) s += 0.25;
+    if (p.contains(RegExp(r'[!@#\$\&*~_\-]'))) s += 0.25;
     return s;
   }
 
@@ -117,12 +121,115 @@ class _SignUpScreenState extends State<SignUpScreen>
     ),
   );
 
-  void _handleSignUp() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const ProfileSetupScreen(), // or ProfileSetupScreen()
-      ),
-    );
+  Future<void> _handleSignUp() async {
+    final name = _nameCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+    final password = _passCtrl.text.trim();
+    final confirm = _confirmCtrl.text.trim();
+
+    developer.log('_handleSignUp invoked', name: 'SignUpScreen');
+
+    // Validation
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all required fields'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+    if (password != confirm) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Passwords do not match'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+    if (!_agreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please agree to the Terms & Conditions'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      developer.log('Calling FirebaseAuthService.signUp…', name: 'SignUpScreen');
+
+      final credential = await FirebaseAuthService.signUp(
+        email: email,
+        password: password,
+        fullName: name,
+        phone: _phoneCtrl.text.trim(),
+      );
+
+      developer.log(
+        'signUp returned – user: ${credential.user?.uid}',
+        name: 'SignUpScreen',
+      );
+
+      if (!mounted) return;
+
+      if (credential.user != null) {
+        // Firebase creates a session immediately, navigate forward.
+        developer.log(
+          'Session active – navigating to ProfileSetup',
+          name: 'SignUpScreen',
+        );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      developer.log(
+        'AuthException in _handleSignUp: ${e.message}',
+        name: 'SignUpScreen',
+        error: e,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? 'Authentication failed'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+    } on TimeoutException catch (e) {
+      developer.log(
+        'TimeoutException in _handleSignUp: $e',
+        name: 'SignUpScreen',
+        error: e,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Request timed out. Please check your connection.'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+    } catch (e, st) {
+      developer.log(
+        'Unexpected error in _handleSignUp: $e',
+        name: 'SignUpScreen',
+        error: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An unexpected error occurred. Please try again.'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override

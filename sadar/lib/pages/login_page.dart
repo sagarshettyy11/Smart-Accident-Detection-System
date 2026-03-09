@@ -1,8 +1,10 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sadar/pages/signup_page.dart';
 import 'package:sadar/screens/dashboard.dart';
+import 'package:sadar/services/firebase_auth_service.dart';
 
 // ─────────────────────────────────────────
 // Color Constants
@@ -41,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen>
   final _passwordCtrl = TextEditingController();
   bool _obscurePass = true;
   bool _rememberMe = true;
-  final bool _isLoading = false;
+  bool _isLoading = false;
 
   late AnimationController _fadeCtrl;
   late List<Animation<double>> _anims;
@@ -83,10 +85,48 @@ class _LoginScreenState extends State<LoginScreen>
     ),
   );
 
-  void _handleLogin() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const DashboardScreen()));
+  Future<void> _handleLogin() async {
+    final email = _emailCtrl.text.trim();
+    final password = _passwordCtrl.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter email and password'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseAuthService.signIn(email: email, password: password);
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        (route) => false,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? 'Authentication failed'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An unexpected error occurred'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override

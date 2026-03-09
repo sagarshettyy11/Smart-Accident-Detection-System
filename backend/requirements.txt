@@ -1,0 +1,11 @@
+flask
+flask-cors
+opencv-python
+ultralytics
+geocoder
+pyttsx3
+twilio
+firebase-admin
+supabase
+numpy
+thread6

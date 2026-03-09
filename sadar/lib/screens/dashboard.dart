@@ -1,21 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sadar/screens/emergency_screen.dart';
 import 'package:sadar/screens/profile_screen.dart';
+import 'package:sadar/services/firestore_service.dart';
+import 'package:sadar/services/monitoring_service.dart';
 
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF0A1628),
-    ),
-  );
-  runApp(const SADARApp());
-}
+
 
 // ══════════════════════════════════════════════════════
 // COLORS
@@ -59,28 +50,6 @@ TextStyle inter({
 );
 
 // ══════════════════════════════════════════════════════
-// APP ROOT
-// ══════════════════════════════════════════════════════
-
-class SADARApp extends StatelessWidget {
-  const SADARApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SADAR',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: AppColors.background,
-        fontFamily: GoogleFonts.inter().fontFamily,
-      ),
-      home: const DashboardScreen(),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════
 // DASHBOARD SCREEN
 // ══════════════════════════════════════════════════════
 
@@ -94,6 +63,13 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
   int _navIndex = 0;
+  String _userName = '';
+  String _userInitials = '';
+  List<Map<String, dynamic>> _contactsList = [];
+
+  // ── Monitoring state ─────────────────────────────
+  bool _isMonitoring = false;
+  bool _monitorLoading = false;
 
   late AnimationController _pulseCtrl;
   late AnimationController _ringCtrl;
@@ -117,6 +93,26 @@ class _DashboardScreenState extends State<DashboardScreen>
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat();
+
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final profile = await FirestoreService.getUserProfile();
+    if (mounted && profile != null) {
+      final name = profile['full_name'] as String? ?? '';
+      setState(() {
+        _userName = name;
+        _userInitials = name.isNotEmpty
+            ? name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').take(2).join().toUpperCase()
+            : '?';
+      });
+    }
+    // Load contacts from Firestore
+    try {
+      final contacts = await FirestoreService.getEmergencyContacts();
+      if (mounted) setState(() => _contactsList = contacts);
+    } catch (_) {}
   }
 
   @override
@@ -238,7 +234,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
               const SizedBox(height: 2),
               Text(
-                'Monday, March 02 · Good morning',
+                'Monday, March 02 · Good morning${_userName.isNotEmpty ? ', $_userName' : ''}',
                 style: inter(fontSize: 11, color: AppColors.textSecondary),
               ),
             ],
@@ -275,7 +271,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  'AK',
+                  _userInitials.isNotEmpty ? _userInitials : 'AK',
                   style: inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -510,40 +506,142 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── MONITOR BUTTON ───────────────────────────────────
 
-  Widget _buildMonitorButton() {
-    return GestureDetector(
-      onTap: () {},
-      child: AnimatedBuilder(
-        animation: _shimmerCtrl,
-        builder: (_, _) {
-          return Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColors.bluePrimary, Color(0xFF2563EB)],
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.bluePrimary.withValues(alpha: 0.35),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+  Future<void> _onMonitorTap() async {
+    if (_monitorLoading) return;
+
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown_user';
+
+    if (_isMonitoring) {
+      // ── STOP ────────────────────────────────────────
+      setState(() => _monitorLoading = true);
+      try {
+        await MonitoringService.stopMonitoring(uid);
+        if (mounted) {
+          setState(() {
+            _isMonitoring = false;
+            _monitorLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('🛑 Monitoring stopped'),
+              backgroundColor: AppColors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.all(16),
             ),
-            child: Stack(
-              children: [
-                // Shimmer sweep
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: ShaderMask(
-                      blendMode: BlendMode.srcOver,
-                      shaderCallback: (bounds) {
-                        final pos = _shimmerCtrl.value * 3 - 1;
-                        return LinearGradient(
+          );
+        }
+      } on MonitoringException catch (e) {
+        if (mounted) {
+          setState(() => _monitorLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('⚠️ ${e.message}'),
+              backgroundColor: AppColors.amber,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.all(16),
+            ),
+          );
+        }
+      }
+    } else {
+      // ── START ───────────────────────────────────────
+      setState(() => _monitorLoading = true);
+      try {
+        await MonitoringService.startMonitoring(uid);
+        if (mounted) {
+          setState(() {
+            _isMonitoring = true;
+            _monitorLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('✅ Monitoring started successfully'),
+              backgroundColor: AppColors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.all(16),
+            ),
+          );
+        }
+      } on MonitoringException catch (e) {
+        if (mounted) {
+          setState(() => _monitorLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ ${e.message}'),
+              backgroundColor: AppColors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.all(16),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Widget _buildMonitorButton() {
+    final isActive = _isMonitoring;
+
+    // Colors
+    final gradientColors = isActive
+        ? [const Color(0xFF059669), const Color(0xFF10B981)] // green
+        : [AppColors.bluePrimary, const Color(0xFF2563EB)];   // blue
+    final shadowColor = isActive
+        ? AppColors.green.withValues(alpha: 0.40)
+        : AppColors.bluePrimary.withValues(alpha: 0.35);
+    final iconBg = isActive
+        ? Colors.white.withValues(alpha: 0.20)
+        : Colors.white.withValues(alpha: 0.15);
+
+    // Labels
+    final title = isActive ? 'Monitoring Vehicle' : 'Start Monitoring';
+    final subtitle = isActive
+        ? 'Dashcam active · Tap to stop'
+        : 'All sensors ready · Tap to activate';
+    final emoji = isActive ? '🟢' : '🛡️';
+
+    return GestureDetector(
+      onTap: _onMonitorTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradientColors,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: shadowColor,
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Shimmer sweep (only when idle / not active)
+            if (!isActive)
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: AnimatedBuilder(
+                    animation: _shimmerCtrl,
+                    builder: (_, _) {
+                      final pos = _shimmerCtrl.value * 3 - 1;
+                      return ShaderMask(
+                        blendMode: BlendMode.srcOver,
+                        shaderCallback: (bounds) => LinearGradient(
                           begin: Alignment(pos - 0.5, 0),
                           end: Alignment(pos + 0.5, 0),
                           colors: [
@@ -551,52 +649,62 @@ class _DashboardScreenState extends State<DashboardScreen>
                             Colors.white.withValues(alpha: 0.09),
                             Colors.transparent,
                           ],
-                        ).createShader(bounds);
-                      },
-                      child: Container(color: Colors.transparent),
-                    ),
+                        ).createShader(bounds),
+                        child: Container(color: Colors.transparent),
+                      );
+                    },
                   ),
                 ),
-                Row(
+              ),
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: _monitorLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text(emoji,
+                          style: const TextStyle(fontSize: 18)),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
+                    Text(
+                      title,
+                      style: inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: -0.2,
                       ),
-                      alignment: Alignment.center,
-                      child: const Text('🛡️', style: TextStyle(fontSize: 18)),
                     ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Start Monitoring',
-                          style: inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                        Text(
-                          'All sensors ready · Tap to activate',
-                          style: inter(
-                            fontSize: 11,
-                            color: Colors.white.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      subtitle,
+                      style: inter(
+                        fontSize: 11,
+                        color: Colors.white.withValues(alpha: 0.7),
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
@@ -856,6 +964,16 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ── EMERGENCY CONTACTS CARD ──────────────────────────
 
   Widget _buildEmergencyContactsCard(BuildContext context) {
+    final colors = [
+      [const Color(0xFFEF4444), const Color(0xFFDC2626)],
+      [const Color(0xFFF59E0B), const Color(0xFFD97706)],
+      [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)],
+      [const Color(0xFF3B82F6), const Color(0xFF2563EB)],
+      [const Color(0xFF10B981), const Color(0xFF059669)],
+    ];
+    final emojis = ['👩', '👨', '👧', '👦', '🧑'];
+    final priorityColors = [AppColors.red, AppColors.amber, const Color(0xFF8B5CF6), AppColors.blueLight, AppColors.green];
+
     return _card(
       child: Column(
         children: [
@@ -874,24 +992,32 @@ class _DashboardScreenState extends State<DashboardScreen>
             },
           ),
           const SizedBox(height: 4),
-          _contactTile(
-            emoji: '👩',
-            gradient: [const Color(0xFFEF4444), const Color(0xFFDC2626)],
-            name: 'Sarah Ahmed',
-            sub: 'Spouse · +1 (555) 020-1110',
-            priority: 'P1',
-            priorityColor: AppColors.red,
-            divider: true,
-          ),
-          _contactTile(
-            emoji: '👨',
-            gradient: [const Color(0xFFF59E0B), const Color(0xFFD97706)],
-            name: 'Dr. James R.',
-            sub: 'Family Doctor · +1 (555) 030-2220',
-            priority: 'P2',
-            priorityColor: AppColors.amber,
-            divider: true,
-          ),
+          // Dynamic contacts from Firestore
+          ..._contactsList.asMap().entries.map((e) {
+            final i = e.key;
+            final c = e.value;
+            return _contactTile(
+              emoji: emojis[i % emojis.length],
+              gradient: colors[i % colors.length],
+              name: c['name'] as String? ?? '',
+              sub: '${c['relationship'] ?? 'Contact'} · ${c['phone'] ?? ''}',
+              priority: 'P${i + 1}',
+              priorityColor: priorityColors[i % priorityColors.length],
+              divider: true,
+            );
+          }),
+          if (_contactsList.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'No contacts added yet',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          // Auto-dispatch row (always shown)
           _contactTile(
             emoji: '🚑',
             gradient: [const Color(0xFF3B82F6), const Color(0xFF2563EB)],

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sadar/pages/login_page.dart';
+import 'package:sadar/services/firebase_auth_service.dart';
+import 'package:sadar/services/firestore_service.dart';
 
 // ─────────────────────────────────────────
 // Color Constants
@@ -36,6 +39,33 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _systemReports = true;
   bool _locationSharing = false;
 
+  // Edit mode
+  bool _isEditing = false;
+  bool _isSaving = false;
+
+  // User data from Firestore
+  String _userName = '';
+  String _userInitials = '';
+  String _userEmail = '';
+  String _userPhone = '';
+  String _userAddress = '';
+  String _bloodGroup = '';
+  int _contactCount = 0;
+
+  // Vehicle data
+  String _vehicleModel = '';
+  String _vehicleNumber = '';
+  String _vehicleType = '';
+
+  // Text editing controllers
+  final _nameCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _addressCtrl = TextEditingController();
+  final _bloodGroupCtrl = TextEditingController();
+  final _vehicleModelCtrl = TextEditingController();
+  final _vehicleNumberCtrl = TextEditingController();
+  final _vehicleTypeCtrl = TextEditingController();
+
   late AnimationController _fadeCtrl;
   late List<Animation<double>> _anims;
 
@@ -54,11 +84,97 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
     });
     _fadeCtrl.forward();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final profile = await FirestoreService.getUserProfile();
+    final contacts = await FirestoreService.getEmergencyContacts();
+    final vehicle = await FirestoreService.getVehicle();
+    final user = FirebaseAuthService.currentUser;
+
+    if (mounted && profile != null) {
+      final name = profile['full_name'] as String? ?? profile['fullName'] as String? ?? '';
+      setState(() {
+        _userName = name;
+        _userInitials = name.isNotEmpty
+            ? name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').take(2).join().toUpperCase()
+            : '?';
+        _userEmail = user?.email ?? '';
+        _userPhone = profile['phone'] as String? ?? '';
+        _userAddress = profile['address'] as String? ?? '';
+        _bloodGroup = profile['blood_group'] as String? ?? '';
+        _contactCount = contacts.length;
+
+        // Vehicle data
+        if (vehicle != null) {
+          _vehicleModel = vehicle['car_model'] as String? ?? vehicle['vehicleModel'] as String? ?? '';
+          _vehicleNumber = vehicle['licence_number'] as String? ?? vehicle['vehicleNumber'] as String? ?? '';
+          _vehicleType = vehicle['vehicleType'] as String? ?? vehicle['car_colour'] as String? ?? '';
+        }
+
+        // Populate controllers
+        _nameCtrl.text = _userName;
+        _phoneCtrl.text = _userPhone;
+        _addressCtrl.text = _userAddress;
+        _bloodGroupCtrl.text = _bloodGroup;
+        _vehicleModelCtrl.text = _vehicleModel;
+        _vehicleNumberCtrl.text = _vehicleNumber;
+        _vehicleTypeCtrl.text = _vehicleType;
+      });
+    }
+  }
+
+  void _toggleEditMode() {
+    HapticFeedback.mediumImpact();
+    setState(() => _isEditing = !_isEditing);
+  }
+
+  Future<void> _saveProfile() async {
+    setState(() => _isSaving = true);
+    try {
+      await FirestoreService.saveUserProfile({
+        'full_name': _nameCtrl.text.trim(),
+        'fullName': _nameCtrl.text.trim(),
+        'phone': _phoneCtrl.text.trim(),
+        'address': _addressCtrl.text.trim(),
+        'blood_group': _bloodGroupCtrl.text.trim(),
+      });
+
+      if (_vehicleModelCtrl.text.trim().isNotEmpty ||
+          _vehicleNumberCtrl.text.trim().isNotEmpty ||
+          _vehicleTypeCtrl.text.trim().isNotEmpty) {
+        await FirestoreService.saveVehicle({
+          'car_model': _vehicleModelCtrl.text.trim(),
+          'vehicleModel': _vehicleModelCtrl.text.trim(),
+          'licence_number': _vehicleNumberCtrl.text.trim(),
+          'vehicleNumber': _vehicleNumberCtrl.text.trim(),
+          'vehicleType': _vehicleTypeCtrl.text.trim(),
+        });
+      }
+    } catch (e) {
+      // Non-fatal
+    }
+
+    if (mounted) {
+      setState(() {
+        _isEditing = false;
+        _isSaving = false;
+      });
+      _loadUserData();
+    }
   }
 
   @override
   void dispose() {
     _fadeCtrl.dispose();
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _addressCtrl.dispose();
+    _bloodGroupCtrl.dispose();
+    _vehicleModelCtrl.dispose();
+    _vehicleNumberCtrl.dispose();
+    _vehicleTypeCtrl.dispose();
     super.dispose();
   }
 
@@ -114,7 +230,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                       _fs(2, _buildPersonalInfo()),
                       const SizedBox(height: 14),
 
-                      // Vehicle / System info
+                      // Vehicle Info
+                      _fs(3, _buildVehicleInfo()),
+                      const SizedBox(height: 14),
+
+                      // Save button (visible in edit mode)
+                      if (_isEditing)
+                        _fs(3, _buildSaveButton()),
+                      if (_isEditing)
+                        const SizedBox(height: 14),
+
+                      // System info
                       _fs(3, _buildSystemInfo()),
                       const SizedBox(height: 14),
 
@@ -207,9 +333,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                   ],
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    'AK',
+                    _userInitials.isNotEmpty ? _userInitials : 'AK',
                     style: TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.w800,
@@ -246,8 +372,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 14),
 
-          const Text(
-            'Ahmed Khan',
+          Text(
+            _userName.isNotEmpty ? _userName : 'User',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
@@ -321,7 +447,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           Expanded(
             child: _StatCell(
-              value: '3',
+              value: '$_contactCount',
               label: 'Contacts',
               color: _C.amber,
               isLast: true,
@@ -338,35 +464,177 @@ class _ProfileScreenState extends State<ProfileScreen>
       title: 'Personal Info',
       icon: Icons.person_outline_rounded,
       iconBg: _C.bluePrimary.withValues(alpha: 0.12),
-      actionLabel: 'Edit',
+      actionLabel: _isEditing ? 'Cancel' : 'Edit',
+      onAction: _toggleEditMode,
       child: Column(
         children: [
+          _isEditing
+              ? _EditableRow(
+                  icon: Icons.person_outline_rounded,
+                  iconBg: _C.bluePrimary.withValues(alpha: 0.1),
+                  label: 'Full Name',
+                  controller: _nameCtrl,
+                )
+              : _InfoRow(
+                  icon: Icons.person_outline_rounded,
+                  iconBg: _C.bluePrimary.withValues(alpha: 0.1),
+                  label: 'Full Name',
+                  value: _userName.isNotEmpty ? _userName : 'Not set',
+                ),
           _InfoRow(
             icon: Icons.email_outlined,
             iconBg: _C.blueLight.withValues(alpha: 0.1),
             label: 'Email',
-            value: 'ahmed.khan@email.com',
+            value: _userEmail.isNotEmpty ? _userEmail : 'Not set',
           ),
-          _InfoRow(
-            icon: Icons.phone_outlined,
-            iconBg: _C.green.withValues(alpha: 0.1),
-            label: 'Phone',
-            value: '+1 (555) 012-3456',
-          ),
-          _InfoRow(
-            icon: Icons.location_on_outlined,
-            iconBg: _C.amber.withValues(alpha: 0.1),
-            label: 'Location',
-            value: 'San Francisco, CA',
-          ),
-          _InfoRow(
-            icon: Icons.bloodtype_outlined,
-            iconBg: _C.red.withValues(alpha: 0.1),
-            label: 'Blood Group',
-            value: 'O+ (Positive)',
-            isLast: true,
-          ),
+          _isEditing
+              ? _EditableRow(
+                  icon: Icons.phone_outlined,
+                  iconBg: _C.green.withValues(alpha: 0.1),
+                  label: 'Phone',
+                  controller: _phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                )
+              : _InfoRow(
+                  icon: Icons.phone_outlined,
+                  iconBg: _C.green.withValues(alpha: 0.1),
+                  label: 'Phone',
+                  value: _userPhone.isNotEmpty ? _userPhone : 'Not set',
+                ),
+          _isEditing
+              ? _EditableRow(
+                  icon: Icons.location_on_outlined,
+                  iconBg: _C.amber.withValues(alpha: 0.1),
+                  label: 'Location',
+                  controller: _addressCtrl,
+                )
+              : _InfoRow(
+                  icon: Icons.location_on_outlined,
+                  iconBg: _C.amber.withValues(alpha: 0.1),
+                  label: 'Location',
+                  value: _userAddress.isNotEmpty ? _userAddress : 'Not set',
+                ),
+          _isEditing
+              ? _EditableRow(
+                  icon: Icons.bloodtype_outlined,
+                  iconBg: _C.red.withValues(alpha: 0.1),
+                  label: 'Blood Group',
+                  controller: _bloodGroupCtrl,
+                  isLast: true,
+                )
+              : _InfoRow(
+                  icon: Icons.bloodtype_outlined,
+                  iconBg: _C.red.withValues(alpha: 0.1),
+                  label: 'Blood Group',
+                  value: _bloodGroup.isNotEmpty ? _bloodGroup : 'Not set',
+                  isLast: true,
+                ),
         ],
+      ),
+    );
+  }
+
+  // ── Vehicle Info ─────────────────────────
+  Widget _buildVehicleInfo() {
+    return _DashCard(
+      title: 'Vehicle Info',
+      icon: Icons.directions_car_rounded,
+      iconBg: _C.amber.withValues(alpha: 0.12),
+      iconColor: _C.amber,
+      actionLabel: _isEditing ? null : 'Edit',
+      onAction: _isEditing ? null : _toggleEditMode,
+      child: Column(
+        children: [
+          _isEditing
+              ? _EditableRow(
+                  icon: Icons.directions_car_outlined,
+                  iconBg: _C.amber.withValues(alpha: 0.1),
+                  label: 'Vehicle Model',
+                  controller: _vehicleModelCtrl,
+                )
+              : _InfoRow(
+                  icon: Icons.directions_car_outlined,
+                  iconBg: _C.amber.withValues(alpha: 0.1),
+                  label: 'Vehicle Model',
+                  value: _vehicleModel.isNotEmpty ? _vehicleModel : 'Not set',
+                ),
+          _isEditing
+              ? _EditableRow(
+                  icon: Icons.confirmation_number_outlined,
+                  iconBg: _C.blueLight.withValues(alpha: 0.1),
+                  label: 'Vehicle Number',
+                  controller: _vehicleNumberCtrl,
+                )
+              : _InfoRow(
+                  icon: Icons.confirmation_number_outlined,
+                  iconBg: _C.blueLight.withValues(alpha: 0.1),
+                  label: 'Vehicle Number',
+                  value: _vehicleNumber.isNotEmpty ? _vehicleNumber : 'Not set',
+                ),
+          _isEditing
+              ? _EditableRow(
+                  icon: Icons.category_outlined,
+                  iconBg: _C.purple.withValues(alpha: 0.1),
+                  label: 'Vehicle Type',
+                  controller: _vehicleTypeCtrl,
+                  isLast: true,
+                )
+              : _InfoRow(
+                  icon: Icons.category_outlined,
+                  iconBg: _C.purple.withValues(alpha: 0.1),
+                  label: 'Vehicle Type',
+                  value: _vehicleType.isNotEmpty ? _vehicleType : 'Not set',
+                  isLast: true,
+                ),
+        ],
+      ),
+    );
+  }
+
+  // ── Save Button ─────────────────────────
+  Widget _buildSaveButton() {
+    return GestureDetector(
+      onTap: _isSaving ? null : _saveProfile,
+      child: Container(
+        height: 52,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_C.bluePrimary, _C.blueLight],
+          ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: _C.bluePrimary.withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_isSaving)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            else
+              const Icon(Icons.save_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 9),
+            Text(
+              _isSaving ? 'Saving...' : 'Save Changes',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -483,7 +751,15 @@ class _ProfileScreenState extends State<ProfileScreen>
   // ── Logout Button ────────────────────────
   Widget _buildLogoutButton() {
     return GestureDetector(
-      onTap: () => HapticFeedback.mediumImpact(),
+      onTap: () async {
+        HapticFeedback.mediumImpact();
+        await FirebaseAuthService.signOut();
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => LoginScreen()),
+          (route) => false,
+        );
+      },
       child: Container(
         height: 52,
         decoration: BoxDecoration(
@@ -623,6 +899,7 @@ class _DashCard extends StatelessWidget {
   final IconData icon;
   final Color? iconBg, iconColor;
   final String? actionLabel;
+  final VoidCallback? onAction;
   final Widget child;
 
   const _DashCard({
@@ -631,6 +908,7 @@ class _DashCard extends StatelessWidget {
     this.iconBg,
     this.iconColor,
     this.actionLabel,
+    this.onAction,
     required this.child,
   });
 
@@ -667,12 +945,15 @@ class _DashCard extends StatelessWidget {
             ),
             const Spacer(),
             if (actionLabel != null)
-              Text(
-                actionLabel!,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: _C.blueLight,
-                  fontWeight: FontWeight.w600,
+              GestureDetector(
+                onTap: onAction,
+                child: Text(
+                  actionLabel!,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: _C.blueLight,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
           ],
@@ -740,6 +1021,113 @@ class _InfoRow extends StatelessWidget {
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: _C.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (!isLast)
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: Colors.white.withValues(alpha: 0.05),
+          ),
+      ],
+    );
+  }
+}
+
+class _EditableRow extends StatelessWidget {
+  final IconData icon;
+  final Color iconBg;
+  final String label;
+  final TextEditingController controller;
+  final TextInputType keyboardType;
+  final bool isLast;
+
+  const _EditableRow({
+    required this.icon,
+    required this.iconBg,
+    required this.label,
+    required this.controller,
+    this.keyboardType = TextInputType.text,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(
+                  icon,
+                  color: Colors.white.withValues(alpha: 0.7),
+                  size: 17,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: _C.textMuted,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    TextField(
+                      controller: controller,
+                      keyboardType: keyboardType,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _C.textPrimary,
+                      ),
+                      cursorColor: _C.blueLight,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        filled: true,
+                        fillColor: _C.bg,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: _C.blueLight.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: _C.blueLight.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(
+                            color: _C.blueLight,
+                          ),
+                        ),
                       ),
                     ),
                   ],

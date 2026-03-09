@@ -1,0 +1,15 @@
+venv/
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyc
+
+# ML model weights (large binary)
+*.pt
+*.pth
+*.weights
+
+# Runtime-generated accident clips
+accident_*.mp4

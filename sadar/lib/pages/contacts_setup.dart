@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sadar/screens/dashboard.dart';
+import 'package:sadar/services/firestore_service.dart';
 
 // ─────────────────────────────────────────
 // Color Constants
@@ -29,7 +30,7 @@ class _ContactEntry {
   final String emoji;
   final Color color;
   int priority;
-  bool notifyOnSOS;
+  bool notifyOnSOS = true;
 
   _ContactEntry({
     required this.id,
@@ -39,7 +40,6 @@ class _ContactEntry {
     required this.emoji,
     required this.color,
     required this.priority,
-    this.notifyOnSOS = true,
   });
 }
 
@@ -66,17 +66,7 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen>
   late AnimationController _fadeCtrl;
   late List<Animation<double>> _anims;
 
-  final List<_ContactEntry> _contacts = [
-    _ContactEntry(
-      id: 'c1',
-      name: 'Sarah Ahmed',
-      relation: 'Spouse · Primary Contact',
-      phone: '+1 (555) 020-1110',
-      emoji: '👩',
-      color: Color(0xFFEF4444),
-      priority: 1,
-    ),
-  ];
+  final List<_ContactEntry> _contacts = [];
 
   final _avatarEmojis = [
     '👩',
@@ -135,10 +125,32 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen>
   Future<void> _handleFinish() async {
     HapticFeedback.mediumImpact();
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 1800));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      widget.onFinish?.call();
+
+    try {
+      // Save all contacts to Firestore
+      for (final c in _contacts) {
+        await FirestoreService.addEmergencyContact({
+          'name': c.name,
+          'phone': c.phone,
+          'relationship': c.relation,
+        });
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving contacts: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

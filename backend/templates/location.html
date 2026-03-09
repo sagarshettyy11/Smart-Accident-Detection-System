@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Share Location</title>
+</head>
+<body>
+    <h2>📍 Sharing your current location...</h2>
+    <p id="status">Requesting permission...</p>
+
+    <script>
+        async function sendLocation() {
+            if (!navigator.geolocation) {
+                document.getElementById("status").innerText = "❌ Geolocation not supported";
+                return;
+            }
+
+            document.getElementById("status").innerText = "⏳ Getting location...";
+
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const data = {
+                    lat: pos.coords.latitude,
+                    lon: pos.coords.longitude,
+                    ts: new Date().toISOString()
+                };
+                console.log("Sending location:", data);
+
+                let res = await fetch("/report_location", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data)
+                });
+
+                let out = await res.json();
+                document.getElementById("status").innerText = "✅ Location shared successfully!";
+                console.log(out);
+
+            }, (err) => {
+                document.getElementById("status").innerText =
+                    "❌ Failed: " + err.message;
+            });
+        }
+
+        sendLocation();
+    </script>
+</body>
+</html>
