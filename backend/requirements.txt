@@ -8,4 +8,6 @@ twilio
 firebase-admin
 supabase
 numpy
-thread6
+SpeechRecognition
+pyaudio
+python-dotenv
