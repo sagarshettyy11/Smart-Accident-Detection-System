@@ -1,12 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import 'package:sadar/screens/emergency_screen.dart';
 import 'package:sadar/screens/profile_screen.dart';
 import 'package:sadar/services/firestore_service.dart';
 import 'package:sadar/services/monitoring_service.dart';
-
-
+import 'package:url_launcher/url_launcher.dart';
 
 // ══════════════════════════════════════════════════════
 // COLORS
@@ -68,9 +71,16 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _contactsList = [];
 
   // ── Monitoring state ─────────────────────────────
+  double? _latitude;
+  double? _longitude;
   bool _isMonitoring = false;
   bool _monitorLoading = false;
-
+  final int _incidentCount = 0;
+  final double _accuracy = 98.0;
+  DateTime? _monitorStartTime;
+  Duration _uptime = Duration.zero;
+  Timer? _uptimeTimer;
+  StreamSubscription<Position>? _locationSubscription;
   late AnimationController _pulseCtrl;
   late AnimationController _ringCtrl;
   late AnimationController _shimmerCtrl;
@@ -97,6 +107,28 @@ class _DashboardScreenState extends State<DashboardScreen>
     _loadUserData();
   }
 
+  void _startLocationTracking() {
+    const locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 5,
+    );
+
+    _locationSubscription =
+        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
+          (Position position) {
+            setState(() {
+              _latitude = position.latitude;
+              _longitude = position.longitude;
+            });
+          },
+        );
+  }
+
+  void _stopLocationTracking() {
+    _locationSubscription?.cancel();
+    _locationSubscription = null;
+  }
+
   Future<void> _loadUserData() async {
     final profile = await FirestoreService.getUserProfile();
     if (mounted && profile != null) {
@@ -104,7 +136,12 @@ class _DashboardScreenState extends State<DashboardScreen>
       setState(() {
         _userName = name;
         _userInitials = name.isNotEmpty
-            ? name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').take(2).join().toUpperCase()
+            ? name
+                  .split(' ')
+                  .map((w) => w.isNotEmpty ? w[0] : '')
+                  .take(2)
+                  .join()
+                  .toUpperCase()
             : '?';
       });
     }
@@ -203,6 +240,21 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  String getGreeting() {
+    final hour = DateTime.now().hour;
+
+    if (hour < 12) {
+      return "Good morning";
+    } else if (hour < 17) {
+      return "Good afternoon";
+    } else {
+      return "Good evening";
+    }
+  }
+
+  String getFormattedDate() {
+    return DateFormat('EEEE, MMMM dd').format(DateTime.now());
+  }
   // ── HEADER ───────────────────────────────────────────
 
   Widget _buildHeader() {
@@ -234,7 +286,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
               const SizedBox(height: 2),
               Text(
-                'Monday, March 02 · Good morning${_userName.isNotEmpty ? ', $_userName' : ''}',
+                '${getFormattedDate()} · ${getGreeting()}${_userName.isNotEmpty ? ', $_userName' : ''}',
                 style: inter(fontSize: 11, color: AppColors.textSecondary),
               ),
             ],
@@ -351,8 +403,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                       children: [
                         const TextSpan(text: 'System '),
                         TextSpan(
-                          text: 'Active',
-                          style: TextStyle(color: AppColors.green),
+                          text: _isMonitoring ? 'Active' : 'Inactive',
+                          style: TextStyle(
+                            color: _isMonitoring
+                                ? AppColors.green
+                                : AppColors.red,
+                          ),
                         ),
                       ],
                     ),
@@ -368,9 +424,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                       icon: '📷',
                       iconColor: AppColors.bluePrimary,
                       name: 'CAMERA',
-                      value: 'Running',
-                      badge: '● OK',
-                      badgeColor: AppColors.green,
+                      value: _isMonitoring ? 'Running' : 'Stopped',
+                      badge: _isMonitoring ? '● OK' : '● OFF',
+                      badgeColor: _isMonitoring
+                          ? AppColors.green
+                          : AppColors.red,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -379,9 +437,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                       icon: '🛰',
                       iconColor: AppColors.green,
                       name: 'GPS SIGNAL',
-                      value: 'Fixed',
-                      badge: '4 SAT',
-                      badgeColor: AppColors.blueLight,
+                      value: !_isMonitoring
+                          ? 'Idle'
+                          : (_latitude != null && _longitude != null
+                                ? 'Fixed'
+                                : 'Searching'),
+                      badge: !_isMonitoring
+                          ? '● OFF'
+                          : (_latitude != null ? '● OK' : '● WAIT'),
+                      badgeColor: !_isMonitoring
+                          ? AppColors.red
+                          : (_latitude != null
+                                ? AppColors.green
+                                : AppColors.amber),
                     ),
                   ),
                 ],
@@ -394,6 +462,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildLivePill() {
+    if (!_isMonitoring) return const SizedBox(); // hide when not monitoring
+
     return AnimatedBuilder(
       animation: _pulseCtrl,
       builder: (_, _) => Container(
@@ -504,6 +574,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  String formatUptime(Duration d) {
+    if (d.inHours > 0) {
+      return '${d.inHours}h';
+    } else if (d.inMinutes > 0) {
+      return '${d.inMinutes}m';
+    } else {
+      return '${d.inSeconds}s';
+    }
+  }
   // ── MONITOR BUTTON ───────────────────────────────────
 
   Future<void> _onMonitorTap() async {
@@ -513,6 +592,11 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     if (_isMonitoring) {
       // ── STOP ────────────────────────────────────────
+      _uptimeTimer?.cancel();
+
+      setState(() {
+        _uptime = Duration.zero;
+      });
       setState(() => _monitorLoading = true);
       try {
         await MonitoringService.stopMonitoring(uid);
@@ -520,6 +604,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           setState(() {
             _isMonitoring = false;
             _monitorLoading = false;
+            _stopLocationTracking();
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -527,7 +612,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               backgroundColor: AppColors.red,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
               margin: const EdgeInsets.all(16),
             ),
           );
@@ -541,7 +627,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               backgroundColor: AppColors.amber,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
               margin: const EdgeInsets.all(16),
             ),
           );
@@ -549,6 +636,16 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
     } else {
       // ── START ───────────────────────────────────────
+      _monitorStartTime = DateTime.now();
+
+      _uptimeTimer?.cancel();
+      _uptimeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (_monitorStartTime != null) {
+          setState(() {
+            _uptime = DateTime.now().difference(_monitorStartTime!);
+          });
+        }
+      });
       setState(() => _monitorLoading = true);
       try {
         await MonitoringService.startMonitoring(uid);
@@ -556,6 +653,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           setState(() {
             _isMonitoring = true;
             _monitorLoading = false;
+            _startLocationTracking();
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -563,7 +661,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               backgroundColor: AppColors.green,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
               margin: const EdgeInsets.all(16),
             ),
           );
@@ -577,7 +676,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               backgroundColor: AppColors.red,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
               margin: const EdgeInsets.all(16),
             ),
           );
@@ -592,7 +692,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     // Colors
     final gradientColors = isActive
         ? [const Color(0xFF059669), const Color(0xFF10B981)] // green
-        : [AppColors.bluePrimary, const Color(0xFF2563EB)];   // blue
+        : [AppColors.bluePrimary, const Color(0xFF2563EB)]; // blue
     final shadowColor = isActive
         ? AppColors.green.withValues(alpha: 0.40)
         : AppColors.bluePrimary.withValues(alpha: 0.35);
@@ -672,12 +772,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
-                      : Text(emoji,
-                          style: const TextStyle(fontSize: 18)),
+                      : Text(emoji, style: const TextStyle(fontSize: 18)),
                 ),
                 const SizedBox(width: 10),
                 Column(
@@ -714,11 +814,21 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _buildStatsRow() {
     return Row(
       children: [
-        Expanded(child: _statBox('0', 'INCIDENTS', AppColors.green)),
+        Expanded(
+          child: _statBox('$_incidentCount', 'INCIDENTS', AppColors.green),
+        ),
         const SizedBox(width: 10),
-        Expanded(child: _statBox('98%', 'ACCURACY', AppColors.blueLight)),
+        Expanded(
+          child: _statBox(
+            '${_accuracy.toStringAsFixed(0)}%',
+            'ACCURACY',
+            AppColors.blueLight,
+          ),
+        ),
         const SizedBox(width: 10),
-        Expanded(child: _statBox('24h', 'UPTIME', AppColors.amber)),
+        Expanded(
+          child: _statBox(formatUptime(_uptime), 'UPTIME', AppColors.amber),
+        ),
       ],
     );
   }
@@ -758,6 +868,25 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  Future<void> _openMap(double lat, double lng) async {
+    final Uri googleMapUrl = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+    );
+
+    if (await canLaunchUrl(googleMapUrl)) {
+      await launchUrl(googleMapUrl, mode: LaunchMode.externalApplication);
+    } else {
+      throw 'Could not open map';
+    }
+  }
+
+  String formatLatitude(double lat) {
+    return '${lat.toStringAsFixed(4)}° ${lat >= 0 ? 'N' : 'S'}';
+  }
+
+  String formatLongitude(double lng) {
+    return '${lng.toStringAsFixed(4)}° ${lng >= 0 ? 'E' : 'W'}';
+  }
   // ── LIVE LOCATION CARD ───────────────────────────────
 
   Widget _buildLocationCard() {
@@ -771,7 +900,11 @@ class _DashboardScreenState extends State<DashboardScreen>
             iconBg: AppColors.bluePrimary.withValues(alpha: 0.15),
             title: 'Live Location',
             action: 'Open Map',
-            onPressed: () {},
+            onPressed: () {
+              if (_latitude != null && _longitude != null) {
+                _openMap(_latitude!, _longitude!);
+              }
+            },
           ),
           const SizedBox(height: 14),
           // Map placeholder
@@ -870,9 +1003,19 @@ class _DashboardScreenState extends State<DashboardScreen>
           // Coordinates
           Row(
             children: [
-              Expanded(child: _coordBox('Latitude', '37.7749° N')),
+              Expanded(
+                child: _coordBox(
+                  'Latitude',
+                  _latitude != null ? formatLatitude(_latitude!) : '--',
+                ),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: _coordBox('Longitude', '122.4194° W')),
+              Expanded(
+                child: _coordBox(
+                  'Longitude',
+                  _longitude != null ? formatLongitude(_longitude!) : '--',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -972,7 +1115,13 @@ class _DashboardScreenState extends State<DashboardScreen>
       [const Color(0xFF10B981), const Color(0xFF059669)],
     ];
     final emojis = ['👩', '👨', '👧', '👦', '🧑'];
-    final priorityColors = [AppColors.red, AppColors.amber, const Color(0xFF8B5CF6), AppColors.blueLight, AppColors.green];
+    final priorityColors = [
+      AppColors.red,
+      AppColors.amber,
+      const Color(0xFF8B5CF6),
+      AppColors.blueLight,
+      AppColors.green,
+    ];
 
     return _card(
       child: Column(
@@ -1130,6 +1279,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  String getCurrentTime() {
+    return DateFormat('hh:mm a').format(DateTime.now());
+  }
   // ── LAST INCIDENT CARD ───────────────────────────────
 
   Widget _buildIncidentCard() {
@@ -1208,7 +1360,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '09:41 AM',
+                      getCurrentTime(),
                       style: inter(
                         fontSize: 11,
                         color: AppColors.textSecondary,
@@ -1337,7 +1489,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                 children: List.generate(items.length, (i) {
                   final active = _navIndex == i;
                   return GestureDetector(
-                    onTap: () => setState(() => _navIndex = i),
+                    onTap: () {
+                      setState(() => _navIndex = i);
+                      if (i == 2) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProfileScreen(),
+                          ),
+                        );
+                      }
+                    },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(
