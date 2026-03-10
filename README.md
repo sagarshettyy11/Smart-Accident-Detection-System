@@ -127,22 +127,20 @@ Flask starts camera (OpenCV) + YOLOv8 detection loop in background thread
 
 ### Prerequisites
 
-Before you begin, make sure you have the following ready:
+Before you begin, make sure you have the following installed and ready:
 
 - **Python ≥ 3.9**
 - **Flutter SDK ≥ 3.11**
 - A **webcam / laptop camera** (for testing)
 - A **Firebase project** with:
   - Cloud Firestore enabled
-  - Firebase Authentication enabled (Email/Password)
+  - Firebase Authentication enabled (Email/Password provider)
   - Firebase Storage enabled
   - A service account key (`firebase_key.json`) downloaded
   - `google-services.json` for Android downloaded
 - A **Twilio account** with:
   - Account SID and Auth Token
   - An SMS-capable Twilio phone number
-- A **Supabase project** (used for user authentication in the Flutter app)
-  - Project URL and anon key
 
 ---
 
@@ -255,31 +253,16 @@ sadar/android/app/google-services.json
 
 > ⚠️ This file is listed in `.gitignore` and must **never** be committed to Git.
 
-#### 3b. Configure Flutter environment
-
-Create the Flutter `.env` file:
+#### 3b. Install Flutter dependencies
 
 ```bash
-# From project root
 cd sadar
-```
-
-Create a file called `.env` in the `sadar/` directory with your Supabase credentials (used for Flutter auth):
-
-```env
-SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_ANON_KEY=your_supabase_anon_key_here
-```
-
-#### 3c. Install Flutter dependencies
-
-```bash
 flutter pub get
 ```
 
-#### 3d. Configure the backend URL
+#### 3c. Configure the backend URL
 
-Open `lib/services/monitoring_service.dart` and update `_baseUrl` to match your backend:
+Open `lib/services/monitoring_service.dart` and update `_baseUrl` to point to your running backend:
 
 | Device | URL to use |
 |---|---|
@@ -287,7 +270,7 @@ Open `lib/services/monitoring_service.dart` and update `_baseUrl` to match your 
 | Physical device (same WiFi) | `http://192.168.x.x:5000` (your machine's local IP) |
 | iOS Simulator | `http://localhost:5000` |
 
-#### 3e. Run the Flutter app
+#### 3d. Run the Flutter app
 
 Ensure a device or emulator is connected, then:
 
@@ -300,7 +283,7 @@ flutter run
 ## 📖 How to Use the App
 
 ### 1. Sign Up / Log In
-Create an account using your email and password. Your profile details (name, vehicle info) are stored in Firestore.
+Create an account using your email and password. Your profile details (name, vehicle info) are stored securely in Firestore.
 
 ### 2. Add an Emergency Contact
 Navigate to the **Emergency** tab and add the phone number of the person to be notified in case of an accident.
