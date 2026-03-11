@@ -9,7 +9,7 @@ import geocoder
 import pyttsx3
 import speech_recognition as sr
 import firebase_admin
-from firebase_admin import credentials, storage
+from firebase_admin import credentials, storage, firestore
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -34,6 +34,7 @@ cred = credentials.Certificate(FIREBASE_KEY)
 firebase_admin.initialize_app(cred, {
     "storageBucket": FIREBASE_BUCKET
 })
+db = firestore.client()
 
 # ================= CLIENTS =================
 app = Flask(__name__)
@@ -139,15 +140,17 @@ def confirm_accident(frames, fps, size, user_id):
 
 # ================Upload video to Firebase===================
     video_url = upload_video_to_firebase(filename, user_id)
-    message = f"""
-🚨 ACCIDENT ALERT
-Location:
-{location}
-Video:
-{video_url}
-"""
-    send_sms(message)
-
+    alert_data = {
+        "user_id": user_id,
+        "location": location,
+        "video": video_url,
+        "timestamp": firestore.SERVER_TIMESTAMP
+    }
+    db.collection("users") \
+    .document(user_id) \
+    .collection("accidents") \
+    .add(alert_data)
+    print("ACCIDENT ALERT SENT TO FIRESTORE")
 
 # ================= DETECTION LOOP =================
 def detection_loop(user_id):
