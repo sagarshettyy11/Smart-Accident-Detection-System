@@ -100,6 +100,7 @@ def upload_video_to_firebase(video_path, user_id):
         return None
     
 # ================= OVERLAP =================
+# ================= OVERLAP =================
 def overlap(boxA, boxB):
     xA = max(boxA[0], boxB[0])
     yA = max(boxA[1], boxB[1])
@@ -111,6 +112,9 @@ def overlap(boxA, boxB):
     boxAArea = (boxA[2]-boxA[0])*(boxA[3]-boxA[1])
     boxBArea = (boxB[2]-boxB[0])*(boxB[3]-boxB[1])
     return interArea / min(boxAArea, boxBArea)
+
+def center(box):
+    return ((box[0] + box[2]) // 2, (box[1] + box[3]) // 2)
 
 # ================= ACCIDENT CONFIRMATION =================
 def confirm_accident(frames, fps, size, user_id):
@@ -168,6 +172,14 @@ def detection_loop(user_id):
             continue
         frame_buffer.append(frame.copy())
         frame_id += 1
+
+# Show camera window always
+        cv2.imshow("SADAR Accident Detection", frame)
+
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+
+# Skip YOLO processing for some frames
         if frame_id % YOLO_FRAME_SKIP != 0:
             continue
         results = model(frame)
@@ -177,28 +189,43 @@ def detection_loop(user_id):
             if cls in [2,3,5,7]:
                 x1,y1,x2,y2 = map(int, box.xyxy[0])
                 vehicles.append((x1,y1,x2,y2))
-        for v in vehicles:
-            ov = overlap(v, zone)
-            if ov > ZONE_OVERLAP_THRESHOLD:
-                if time.time() - last_alert > cooldown:
-                    print("Possible crash detected")
-                    # 10 seconds BEFORE accident
-                    before_frames = list(frame_buffer)[-int(10*fps):]
-                    # 10 seconds AFTER accident
-                    after_frames = []
-                    start_time = time.time()
-                    while time.time() - start_time < 10:
-                        ret2, frame2 = cap.read()
-                        if ret2:
-                            after_frames.append(frame2)
-                    all_frames = before_frames + after_frames
-                    confirm_accident(
-                        all_frames,
-                        fps,
-                        (w, h),
-                        user_id
-                    )
-                    last_alert = time.time()
+        if len(vehicles) < 2:
+            continue
+        for i in range(len(vehicles)):
+            for j in range(i + 1, len(vehicles)):
+                v1 = vehicles[i]
+                v2 = vehicles[j]
+                collision = overlap(v1, v2)
+                c1 = center(v1)
+                c2 = center(v2)
+                distance = ((c1[0]-c2[0])**2 + (c1[1]-c2[1])**2) ** 0.5
+                if collision > 0.25 or distance < 80:
+                
+                    if time.time() - last_alert > cooldown:
+                        print("Possible vehicle collision detected")
+
+                        # 10 seconds BEFORE accident
+                        before_frames = list(frame_buffer)[-int(10*fps):]
+
+                        # 10 seconds AFTER accident
+                        after_frames = []
+                        start_time = time.time()
+
+                        while time.time() - start_time < 10:
+                            ret2, frame2 = cap.read()
+                            if ret2:
+                                after_frames.append(frame2)
+
+                        all_frames = before_frames + after_frames
+
+                        confirm_accident(
+                            all_frames,
+                            fps,
+                            (w, h),
+                            user_id
+                        )
+
+                        last_alert = time.time()
         cv2.rectangle(frame,(zone[0],zone[1]),(zone[2],zone[3]),(0,255,0),2)
         cv2.imshow("SADAR Accident Detection", frame)
         if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -222,7 +249,7 @@ def start_monitoring():
     global monitoring_active
     if monitoring_active:
         return jsonify({"message": "Monitoring already running"})
-    data = request.get_json()
+    speak("Accident detection started. Drive safely.")
     data = request.get_json()
     if not data or "user_id" not in data:
         return jsonify({"error": "user_id required"}), 400
@@ -239,6 +266,7 @@ def start_monitoring():
 def stop_monitoring():
     global monitoring_active
     monitoring_active = False
+    speak("Accident monitoring stopped.")
     return jsonify({"message": "Monitoring stopped"})
 
 # ================= MAIN =================
