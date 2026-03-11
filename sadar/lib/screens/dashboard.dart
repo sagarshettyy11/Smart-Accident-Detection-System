@@ -1,6 +1,6 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_sms/flutter_sms.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,6 +10,7 @@ import 'package:sadar/screens/profile_screen.dart';
 import 'package:sadar/services/firestore_service.dart';
 import 'package:sadar/services/monitoring_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ══════════════════════════════════════════════════════
 // COLORS
@@ -80,6 +81,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   DateTime? _monitorStartTime;
   Duration _uptime = Duration.zero;
   Timer? _uptimeTimer;
+  String? _lastAlertId;
   StreamSubscription<Position>? _locationSubscription;
   late AnimationController _pulseCtrl;
   late AnimationController _ringCtrl;
@@ -88,6 +90,14 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
+
+    FirestoreService.listenAccidentAlerts().listen((alerts) {
+      if (alerts.isEmpty) return;
+      final alert = alerts.first;
+      if (_lastAlertId == alert['id']) return;
+      _lastAlertId = alert['id'];
+      handleAccidentAlert(alert['location'], alert['video']);
+    });
 
     _pulseCtrl = AnimationController(
       vsync: this,
@@ -122,6 +132,66 @@ class _DashboardScreenState extends State<DashboardScreen>
             });
           },
         );
+  }
+
+  Future<void> sendEmergencySMS(String location, String videoUrl) async {
+    List<String> phones = [];
+    for (var contact in _contactsList) {
+      final phone = contact['phone'];
+      if (phone != null && phone.isNotEmpty) {
+        phones.add(phone);
+      }
+    }
+    if (phones.isEmpty) {
+      debugPrint("No emergency contacts found");
+      return;
+    }
+    String message =
+        """
+🚨 ACCIDENT ALERT
+Possible accident detected.
+Location:
+$location
+Video Evidence:
+$videoUrl
+""";
+    try {
+      await sendSMS(message: message, recipients: phones);
+    } catch (e) {
+      debugPrint("SMS failed: $e");
+    }
+  }
+
+  void listenForAccidents() {
+    FirebaseFirestore.instance.collection('accident_alerts').snapshots().listen(
+      (snapshot) {
+        for (var change in snapshot.docChanges) {
+          if (change.type == DocumentChangeType.added) {
+            final data = change.doc.data();
+
+            final location = data?['location'];
+            final video = data?['video'];
+
+            handleAccidentAlert(location, video);
+          }
+        }
+      },
+    );
+  }
+
+  void handleAccidentAlert(String location, String video) async {
+    if (_contactsList.isEmpty) {
+      await _loadUserData();
+    }
+    await sendEmergencySMS(location, video);
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("🚨 Accident Detected"),
+        content: Text("Emergency alert sent.\n\nLocation:\n$location"),
+      ),
+    );
   }
 
   void _stopLocationTracking() {

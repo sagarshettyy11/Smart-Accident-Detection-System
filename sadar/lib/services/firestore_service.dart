@@ -81,10 +81,7 @@ class FirestoreService {
     final ref = _contactsRef;
     if (ref == null) return;
 
-    await ref.add({
-      ...data,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    await ref.add({...data, 'createdAt': FieldValue.serverTimestamp()});
   }
 
   /// Delete an emergency contact by document ID.
@@ -108,9 +105,9 @@ class FirestoreService {
         .collection('vehicles')
         .doc('default')
         .set({
-      ...data,
-      'updated_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+          ...data,
+          'updated_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
   }
 
   /// Get vehicle data.
@@ -126,5 +123,37 @@ class FirestoreService {
         .get();
     if (!doc.exists) return null;
     return doc.data();
+  }
+
+  // ── Accident Alerts ─────────────────────────────
+
+  /// Get accident alerts for the current user
+  static Stream<List<Map<String, dynamic>>> listenAccidentAlerts() {
+    final uid = _uid;
+
+    if (uid == null) {
+      return const Stream.empty();
+    }
+
+    return _db
+        .collection('accident_alerts')
+        .where('user_id', isEqualTo: uid)
+        .snapshots()
+        .map((snapshot) {
+          final alerts = snapshot.docs.map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          }).toList();
+
+          // Sort locally instead of Firestore
+          alerts.sort((a, b) {
+            final t1 = a['timestamp'] as Timestamp?;
+            final t2 = b['timestamp'] as Timestamp?;
+            return (t2?.compareTo(t1 ?? Timestamp(0, 0)) ?? 0);
+          });
+
+          return alerts;
+        });
   }
 }
