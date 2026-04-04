@@ -168,14 +168,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
           SafeArea(
             child: Column(
               children: [
-                // ── Top bar (fixed) ──────────────
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
                   child: _fs(0, _buildTopBar()),
                 ),
                 const SizedBox(height: 16),
-
-                // ── Step indicator (fixed) ───────
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: _fs(0, const _StepIndicator(currentStep: 2)),

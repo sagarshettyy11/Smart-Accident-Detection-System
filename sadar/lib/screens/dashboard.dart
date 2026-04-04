@@ -1299,6 +1299,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 }
+
 class _MapGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
