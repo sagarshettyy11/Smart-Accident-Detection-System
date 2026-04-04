@@ -26,7 +26,8 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with TickerProviderStateMixin {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _obscurePass = true;
@@ -37,7 +38,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
     _anims = List.generate(7, (i) {
       final s = (i * 0.1).clamp(0.0, 1.0);
       return CurvedAnimation(
@@ -47,7 +51,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     });
     _fadeCtrl.forward();
   }
-
   @override
   void dispose() {
     _fadeCtrl.dispose();
@@ -55,21 +58,25 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _passwordCtrl.dispose();
     super.dispose();
   }
-
   Widget _fs(int i, Widget child) => FadeTransition(
     opacity: _anims[i],
     child: SlideTransition(
-      position: Tween(begin: const Offset(0, 0.18), end: Offset.zero).animate(_anims[i]),
+      position: Tween(
+        begin: const Offset(0, 0.18),
+        end: Offset.zero,
+      ).animate(_anims[i]),
       child: child,
     ),
   );
-
   Future<void> _handleLogin() async {
     final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text.trim();
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password'), backgroundColor: Color(0xFFEF4444)),
+        const SnackBar(
+          content: Text('Please enter email and password'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
       );
       return;
     }
@@ -77,24 +84,30 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     try {
       await FirebaseAuthService.signIn(email: email, password: password);
       if (!mounted) return;
-      Navigator.of(
-        context,
-      ).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const DashboardScreen()), (route) => false);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        (route) => false,
+      );
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Authentication failed'), backgroundColor: const Color(0xFFEF4444)),
+        SnackBar(
+          content: Text(e.message ?? 'Authentication failed'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('An unexpected error occurred'), backgroundColor: Color(0xFFEF4444)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An unexpected error occurred'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,8 +115,16 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          Positioned(top: -100, right: -80, child: _Glow(color: _C.bluePrimary, size: 320, opacity: 0.14)),
-          Positioned(bottom: 80, left: -80, child: _Glow(color: _C.green, size: 240, opacity: 0.07)),
+          Positioned(
+            top: -100,
+            right: -80,
+            child: _Glow(color: _C.bluePrimary, size: 320, opacity: 0.14),
+          ),
+          Positioned(
+            bottom: 80,
+            left: -80,
+            child: _Glow(color: _C.green, size: 240, opacity: 0.07),
+          ),
           SafeArea(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -136,11 +157,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       icon: Icons.lock_outline_rounded,
                       obscure: _obscurePass,
                       suffix: GestureDetector(
-                        onTap: () => setState(() => _obscurePass = !_obscurePass),
+                        onTap: () =>
+                            setState(() => _obscurePass = !_obscurePass),
                         child: Padding(
                           padding: const EdgeInsets.only(right: 14),
                           child: Icon(
-                            _obscurePass ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscurePass
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
                             color: _C.textMuted,
                             size: 20,
                           ),
@@ -175,12 +199,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       ),
     );
   }
-
   Widget _buildBrandRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Logo + name
         Row(
           children: [
             Container(
@@ -194,20 +216,33 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 ),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
-                  BoxShadow(color: _C.bluePrimary.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4)),
+                  BoxShadow(
+                    color: _C.bluePrimary.withValues(alpha: 0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
                 ],
               ),
               child: const Center(
                 child: Text(
                   'S',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
             const SizedBox(width: 9),
             const Text(
               'SADAR',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _C.textPrimary, letterSpacing: 1),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: _C.textPrimary,
+                letterSpacing: 1,
+              ),
             ),
           ],
         ),
@@ -215,7 +250,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       ],
     );
   }
-
   Widget _buildWelcomeText() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,7 +272,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       ],
     );
   }
-
   Widget _buildRememberRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -254,14 +287,27 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 decoration: BoxDecoration(
                   color: _rememberMe ? _C.bluePrimary : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: _rememberMe ? _C.bluePrimary : _C.textMuted, width: 1.5),
+                  border: Border.all(
+                    color: _rememberMe ? _C.bluePrimary : _C.textMuted,
+                    width: 1.5,
+                  ),
                 ),
-                child: _rememberMe ? const Icon(Icons.check_rounded, color: Colors.white, size: 13) : null,
+                child: _rememberMe
+                    ? const Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 13,
+                      )
+                    : null,
               ),
               const SizedBox(width: 9),
               const Text(
                 'Remember me',
-                style: TextStyle(fontSize: 12, color: _C.textSecondary, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: _C.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -270,13 +316,16 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           onTap: () => HapticFeedback.lightImpact(),
           child: const Text(
             'Forgot password?',
-            style: TextStyle(fontSize: 12, color: _C.blueLight, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: 12,
+              color: _C.blueLight,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
     );
   }
-
   Widget _buildSocialRow() {
     return Row(
       children: [
@@ -290,7 +339,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       ],
     );
   }
-
   Widget _buildSignUpLink() {
     return Center(
       child: GestureDetector(
@@ -302,10 +350,15 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               const TextSpan(text: "Don't have an account? "),
               TextSpan(
                 text: 'Sign Up',
-                style: TextStyle(color: _C.blueLight, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: _C.blueLight,
+                  fontWeight: FontWeight.w700,
+                ),
                 recognizer: TapGestureRecognizer()
                   ..onTap = () {
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SignUpScreen()));
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                    );
                   },
               ),
             ],
@@ -315,8 +368,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 }
-
-// Shared / Reusable Widgets
 class _Glow extends StatelessWidget {
   final Color color;
   final double size, opacity;
@@ -336,17 +387,20 @@ class _Glow extends StatelessWidget {
     ),
   );
 }
-
 class _SystemOnlinePill extends StatefulWidget {
   @override
   State<_SystemOnlinePill> createState() => _SystemOnlinePillState();
 }
-class _SystemOnlinePillState extends State<_SystemOnlinePill> with SingleTickerProviderStateMixin {
+class _SystemOnlinePillState extends State<_SystemOnlinePill>
+    with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
   }
   @override
   void dispose() {
@@ -370,21 +424,26 @@ class _SystemOnlinePillState extends State<_SystemOnlinePill> with SingleTickerP
             child: Container(
               width: 6,
               height: 6,
-              decoration: const BoxDecoration(color: _C.green, shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                color: _C.green,
+                shape: BoxShape.circle,
+              ),
             ),
           ),
           const SizedBox(width: 6),
           const Text(
             'System Online',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _C.green),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: _C.green,
+            ),
           ),
         ],
       ),
     );
   }
 }
-
-// Focused input field
 class _InputField extends StatefulWidget {
   final TextEditingController controller;
   final String label, hint;
@@ -404,7 +463,6 @@ class _InputField extends StatefulWidget {
   @override
   State<_InputField> createState() => _InputFieldState();
 }
-
 class _InputFieldState extends State<_InputField> {
   bool _focused = false;
   @override
@@ -428,28 +486,43 @@ class _InputFieldState extends State<_InputField> {
             duration: const Duration(milliseconds: 200),
             height: 52,
             decoration: BoxDecoration(
-              color: _focused ? _C.bluePrimary.withValues(alpha: 0.08) : _C.cardBg,
+              color: _focused
+                  ? _C.bluePrimary.withValues(alpha: 0.08)
+                  : _C.cardBg,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: _focused ? _C.bluePrimary.withValues(alpha: 0.6) : _C.border,
+                color: _focused
+                    ? _C.bluePrimary.withValues(alpha: 0.6)
+                    : _C.border,
                 width: _focused ? 1.5 : 1,
               ),
             ),
             child: Row(
               children: [
                 const SizedBox(width: 14),
-                Icon(widget.icon, color: _focused ? _C.blueLight : _C.textMuted, size: 19),
+                Icon(
+                  widget.icon,
+                  color: _focused ? _C.blueLight : _C.textMuted,
+                  size: 19,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     controller: widget.controller,
                     keyboardType: widget.keyboardType,
                     obscureText: widget.obscure,
-                    style: const TextStyle(fontSize: 14, color: _C.textPrimary, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: _C.textPrimary,
+                      fontWeight: FontWeight.w500,
+                    ),
                     cursorColor: _C.blueLight,
                     decoration: InputDecoration(
                       hintText: widget.hint,
-                      hintStyle: const TextStyle(fontSize: 13, color: _C.textMuted),
+                      hintStyle: const TextStyle(
+                        fontSize: 13,
+                        color: _C.textMuted,
+                      ),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.zero,
                     ),
@@ -465,13 +538,17 @@ class _InputFieldState extends State<_InputField> {
   }
 }
 
-// Gradient primary button
 class _PrimaryButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool isLoading;
   final VoidCallback? onTap;
-  const _PrimaryButton({required this.label, required this.icon, required this.isLoading, this.onTap});
+  const _PrimaryButton({
+    required this.label,
+    required this.icon,
+    required this.isLoading,
+    this.onTap,
+  });
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -486,7 +563,11 @@ class _PrimaryButton extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: _C.bluePrimary.withValues(alpha: 0.38), blurRadius: 20, offset: const Offset(0, 8)),
+            BoxShadow(
+              color: _C.bluePrimary.withValues(alpha: 0.38),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
           ],
         ),
         child: Center(
@@ -494,7 +575,10 @@ class _PrimaryButton extends StatelessWidget {
               ? const SizedBox(
                   width: 22,
                   height: 22,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
                 )
               : Row(
                   mainAxisSize: MainAxisSize.min,
@@ -518,7 +602,6 @@ class _PrimaryButton extends StatelessWidget {
   }
 }
 
-// "Or continue with" divider
 class _OrDivider extends StatelessWidget {
   const _OrDivider();
   @override
@@ -530,7 +613,11 @@ class _OrDivider extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Text(
             'or continue with',
-            style: TextStyle(fontSize: 11, color: _C.textMuted, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 11,
+              color: _C.textMuted,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         Expanded(child: Divider(color: _C.border, thickness: 1)),
@@ -539,7 +626,6 @@ class _OrDivider extends StatelessWidget {
   }
 }
 
-// Google / Apple social button
 class _SocialButton extends StatelessWidget {
   final String label, emoji;
   const _SocialButton({required this.label, required this.emoji});
@@ -561,7 +647,11 @@ class _SocialButton extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               label,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _C.textSecondary),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _C.textSecondary,
+              ),
             ),
           ],
         ),

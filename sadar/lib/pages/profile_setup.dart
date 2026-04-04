@@ -74,7 +74,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     });
     _fadeCtrl.forward();
   }
-
   @override
   void dispose() {
     _fadeCtrl.dispose();
@@ -90,7 +89,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     _yearCtrl.dispose();
     super.dispose();
   }
-
   Widget _fs(int i, Widget child) => FadeTransition(
     opacity: _anims[i],
     child: SlideTransition(
@@ -101,7 +99,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       child: child,
     ),
   );
-
   String _getInitials() {
     final name = _firstNameCtrl.text.trim();
     if (name.isEmpty) return '?';
@@ -113,7 +110,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
         .join()
         .toUpperCase();
   }
-
   Future<void> _handleContinue() async {
     setState(() => _isLoading = true);
     try {
@@ -130,8 +126,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     } catch (e) {
       debugPrint('Profile save failed (non-fatal): $e');
     }
-
-    // Attempt to save vehicle data (best-effort)
     try {
       if (_carModelCtrl.text.trim().isNotEmpty) {
         await FirestoreService.saveVehicle({
@@ -145,7 +139,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     } catch (e) {
       debugPrint('Vehicle save failed (non-fatal): $e');
     }
-
     if (!mounted) return;
     setState(() => _isLoading = false);
 
@@ -155,7 +148,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       ),
     );
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -173,7 +165,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
             left: -60,
             child: _Glow(color: _C.purple, size: 200, opacity: 0.07),
           ),
-
           SafeArea(
             child: Column(
               children: [
@@ -190,8 +181,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                   child: _fs(0, const _StepIndicator(currentStep: 2)),
                 ),
                 const SizedBox(height: 4),
-
-                // ── Scrollable content ───────────
                 Expanded(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
@@ -199,19 +188,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Welcome
                         _fs(1, _buildWelcomeText()),
                         const SizedBox(height: 20),
-
-                        // Avatar
                         _fs(1, _buildAvatarPicker()),
                         const SizedBox(height: 20),
-
-                        // ── Personal Info ──────────────
                         _fs(2, _buildSectionLabel('Personal Info')),
                         const SizedBox(height: 12),
-
-                        // First Name
                         _fs(
                           2,
                           _InputField(
@@ -222,8 +204,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           ),
                         ),
                         const SizedBox(height: 14),
-
-                        // DOB + Gender row
                         _fs(
                           2,
                           Row(
@@ -253,8 +233,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           ),
                         ),
                         const SizedBox(height: 14),
-
-                        // Blood Group + National ID row
                         _fs(
                           3,
                           Row(
@@ -283,8 +261,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           ),
                         ),
                         const SizedBox(height: 14),
-
-                        // Home Address
                         _fs(
                           3,
                           _InputField(
@@ -295,8 +271,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           ),
                         ),
                         const SizedBox(height: 14),
-
-                        // Medical conditions
                         _fs(
                           4,
                           _InputField(
@@ -307,8 +281,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           ),
                         ),
                         const SizedBox(height: 14),
-
-                        // Allergies
                         _fs(
                           4,
                           _InputField(
@@ -319,12 +291,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           ),
                         ),
                         const SizedBox(height: 22),
-
-                        // ── Vehicle Details ────────────
                         _fs(5, _buildSectionLabel('🚗  Vehicle Details')),
                         const SizedBox(height: 12),
-
-                        // Car Model
                         _fs(
                           5,
                           _InputField(
@@ -335,8 +303,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           ),
                         ),
                         const SizedBox(height: 14),
-
-                        // Licence Number
                         _fs(
                           5,
                           _InputField(
@@ -348,8 +314,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           ),
                         ),
                         const SizedBox(height: 14),
-
-                        // RC Number
                         _fs(
                           6,
                           _InputField(
@@ -360,8 +324,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           ),
                         ),
                         const SizedBox(height: 14),
-
-                        // Car Colour + Year row
                         _fs(
                           6,
                           Row(
@@ -391,12 +353,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           ),
                         ),
                         const SizedBox(height: 22),
-
-                        // Info banner
                         _fs(7, _buildInfoBanner()),
                         const SizedBox(height: 24),
-
-                        // Continue button
                         _fs(
                           8,
                           _PrimaryButton(
@@ -407,8 +365,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           ),
                         ),
                         const SizedBox(height: 14),
-
-                        // Skip
                         _fs(
                           8,
                           GestureDetector(
@@ -445,9 +401,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
         ],
       ),
     );
-  }
-
-  // ── Top Bar ──────────────────────────────
+  }  
   Widget _buildTopBar() {
     return Row(
       children: [
@@ -498,8 +452,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       ],
     );
   }
-
-  // ── Welcome text ─────────────────────────
   Widget _buildWelcomeText() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -522,8 +474,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       ],
     );
   }
-
-  // ── Avatar picker ─────────────────────────
   Widget _buildAvatarPicker() {
     return Center(
       child: Column(
@@ -593,8 +543,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       ),
     );
   }
-
-  // ── Section label ─────────────────────────
   Widget _buildSectionLabel(String label) => Text(
     label,
     style: const TextStyle(
@@ -604,8 +552,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       letterSpacing: 1.3,
     ),
   );
-
-  // ── Info banner ───────────────────────────
   Widget _buildInfoBanner() {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -649,10 +595,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
   }
 }
 
-// ═════════════════════════════════════════
-// Reusable Widgets
-// ═════════════════════════════════════════
-
 class _Glow extends StatelessWidget {
   final Color color;
   final double size, opacity;
@@ -673,13 +615,11 @@ class _Glow extends StatelessWidget {
   );
 }
 
-// Focused input field
 class _InputField extends StatefulWidget {
   final TextEditingController controller;
   final String label, hint;
   final IconData icon;
   final TextInputType keyboardType;
-
   const _InputField({
     required this.controller,
     required this.label,
@@ -687,14 +627,12 @@ class _InputField extends StatefulWidget {
     required this.icon,
     this.keyboardType = TextInputType.text,
   });
-
   @override
   State<_InputField> createState() => _InputFieldState();
 }
 
 class _InputFieldState extends State<_InputField> {
   bool _focused = false;
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -767,14 +705,12 @@ class _InputFieldState extends State<_InputField> {
   }
 }
 
-// Dropdown field
 class _DropdownField extends StatefulWidget {
   final String label, hint;
   final IconData icon;
   final String? value;
   final List<String> items;
   final ValueChanged<String?> onChanged;
-
   const _DropdownField({
     required this.label,
     required this.hint,
@@ -783,14 +719,12 @@ class _DropdownField extends StatefulWidget {
     required this.items,
     required this.onChanged,
   });
-
   @override
   State<_DropdownField> createState() => _DropdownFieldState();
 }
 
 class _DropdownFieldState extends State<_DropdownField> {
   bool _focused = false;
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -864,11 +798,9 @@ class _DropdownFieldState extends State<_DropdownField> {
   }
 }
 
-// 3-step indicator
 class _StepIndicator extends StatelessWidget {
   final int currentStep;
   const _StepIndicator({required this.currentStep});
-
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -881,22 +813,18 @@ class _StepIndicator extends StatelessWidget {
       ],
     );
   }
-
   _DS _state(int s) {
     if (s < currentStep) return _DS.done;
     if (s == currentStep) return _DS.active;
     return _DS.inactive;
   }
-
   _DS _lineState(int afterStep) {
     if (afterStep < currentStep) return _DS.done;
     if (afterStep == currentStep) return _DS.active;
     return _DS.inactive;
   }
 }
-
 enum _DS { active, done, inactive }
-
 class _StepDot extends StatelessWidget {
   final int number;
   final String label;
@@ -906,7 +834,6 @@ class _StepDot extends StatelessWidget {
     required this.label,
     required this.state,
   });
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -976,20 +903,17 @@ class _StepLine extends StatelessWidget {
   );
 }
 
-// Primary button
 class _PrimaryButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool isLoading;
   final VoidCallback? onTap;
-
   const _PrimaryButton({
     required this.label,
     required this.icon,
     required this.isLoading,
     this.onTap,
   });
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(

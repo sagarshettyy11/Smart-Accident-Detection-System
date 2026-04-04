@@ -1,24 +1,13 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_sms/flutter_sms.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
 import 'package:sadar/screens/emergency_screen.dart';
 import 'package:sadar/screens/profile_screen.dart';
 import 'package:sadar/services/firestore_service.dart';
 import 'package:sadar/services/monitoring_service.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-// ══════════════════════════════════════════════════════
-// COLORS
-// ══════════════════════════════════════════════════════
 
 class AppColors {
   AppColors._();
-
   static const Color background = Color(0xFF060E1D);
   static const Color blueDark = Color(0xFF0A1628);
   static const Color blueMid = Color(0xFF0F2347);
@@ -30,15 +19,9 @@ class AppColors {
   static const Color textPrimary = Color(0xFFF0F4FF);
   static const Color textSecondary = Color(0xFF8DA0C4);
   static const Color textMuted = Color(0xFF4A6080);
-
   static Color get cardBg => const Color(0xFF0F2347).withValues(alpha: 0.7);
   static Color get cardBorder => blueLight.withValues(alpha: 0.15);
 }
-
-// ══════════════════════════════════════════════════════
-// TYPOGRAPHY HELPER
-// ══════════════════════════════════════════════════════
-
 TextStyle inter({
   double fontSize = 14,
   FontWeight fontWeight = FontWeight.w400,
@@ -53,152 +36,39 @@ TextStyle inter({
   height: height,
 );
 
-// ══════════════════════════════════════════════════════
-// DASHBOARD SCREEN
-// ══════════════════════════════════════════════════════
-
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
-
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
-
 class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
   int _navIndex = 0;
   String _userName = '';
   String _userInitials = '';
   List<Map<String, dynamic>> _contactsList = [];
-
-  // ── Monitoring state ─────────────────────────────
-  double? _latitude;
-  double? _longitude;
   bool _isMonitoring = false;
   bool _monitorLoading = false;
-  final int _incidentCount = 0;
-  final double _accuracy = 98.0;
-  DateTime? _monitorStartTime;
-  Duration _uptime = Duration.zero;
-  Timer? _uptimeTimer;
-  String? _lastAlertId;
-  StreamSubscription<Position>? _locationSubscription;
   late AnimationController _pulseCtrl;
   late AnimationController _ringCtrl;
   late AnimationController _shimmerCtrl;
-
   @override
   void initState() {
     super.initState();
-
-    FirestoreService.listenAccidentAlerts().listen((alerts) {
-      if (alerts.isEmpty) return;
-      final alert = alerts.first;
-      if (_lastAlertId == alert['id']) return;
-      _lastAlertId = alert['id'];
-      handleAccidentAlert(alert['location'], alert['video']);
-    });
-
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-
     _ringCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2500),
     )..repeat();
-
     _shimmerCtrl = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat();
-
     _loadUserData();
   }
-
-  void _startLocationTracking() {
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 5,
-    );
-
-    _locationSubscription =
-        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
-          (Position position) {
-            setState(() {
-              _latitude = position.latitude;
-              _longitude = position.longitude;
-            });
-          },
-        );
-  }
-
-  Future<void> sendEmergencySMS(String location, String videoUrl) async {
-    List<String> phones = [];
-    for (var contact in _contactsList) {
-      final phone = contact['phone'];
-      if (phone != null && phone.isNotEmpty) {
-        phones.add(phone);
-      }
-    }
-    if (phones.isEmpty) {
-      debugPrint("No emergency contacts found");
-      return;
-    }
-    String message =
-        """
-🚨 ACCIDENT ALERT
-Possible accident detected.
-Location:
-$location
-Video Evidence:
-$videoUrl
-""";
-    try {
-      await sendSMS(message: message, recipients: phones);
-    } catch (e) {
-      debugPrint("SMS failed: $e");
-    }
-  }
-
-  void listenForAccidents() {
-    FirebaseFirestore.instance.collection('accident_alerts').snapshots().listen(
-      (snapshot) {
-        for (var change in snapshot.docChanges) {
-          if (change.type == DocumentChangeType.added) {
-            final data = change.doc.data();
-
-            final location = data?['location'];
-            final video = data?['video'];
-
-            handleAccidentAlert(location, video);
-          }
-        }
-      },
-    );
-  }
-
-  void handleAccidentAlert(String location, String video) async {
-    if (_contactsList.isEmpty) {
-      await _loadUserData();
-    }
-    await sendEmergencySMS(location, video);
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("🚨 Accident Detected"),
-        content: Text("Emergency alert sent.\n\nLocation:\n$location"),
-      ),
-    );
-  }
-
-  void _stopLocationTracking() {
-    _locationSubscription?.cancel();
-    _locationSubscription = null;
-  }
-
   Future<void> _loadUserData() async {
     final profile = await FirestoreService.getUserProfile();
     if (mounted && profile != null) {
@@ -206,22 +76,15 @@ $videoUrl
       setState(() {
         _userName = name;
         _userInitials = name.isNotEmpty
-            ? name
-                  .split(' ')
-                  .map((w) => w.isNotEmpty ? w[0] : '')
-                  .take(2)
-                  .join()
-                  .toUpperCase()
+            ? name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').take(2).join().toUpperCase()
             : '?';
       });
     }
-    // Load contacts from Firestore
     try {
       final contacts = await FirestoreService.getEmergencyContacts();
       if (mounted) setState(() => _contactsList = contacts);
     } catch (_) {}
   }
-
   @override
   void dispose() {
     _pulseCtrl.dispose();
@@ -229,9 +92,6 @@ $videoUrl
     _shimmerCtrl.dispose();
     super.dispose();
   }
-
-  // ── BUILD ────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -249,8 +109,6 @@ $videoUrl
       ),
     );
   }
-
-  // Background radial glows
   Widget _ambientGlow() {
     return Stack(
       children: [
@@ -270,7 +128,6 @@ $videoUrl
       ],
     );
   }
-
   Widget _glowCircle(double size, Color color) => Container(
     width: size,
     height: size,
@@ -279,7 +136,6 @@ $videoUrl
       gradient: RadialGradient(colors: [color, Colors.transparent]),
     ),
   );
-
   Widget _scrollContent(BuildContext context) {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -309,24 +165,6 @@ $videoUrl
       ],
     );
   }
-
-  String getGreeting() {
-    final hour = DateTime.now().hour;
-
-    if (hour < 12) {
-      return "Good morning";
-    } else if (hour < 17) {
-      return "Good afternoon";
-    } else {
-      return "Good evening";
-    }
-  }
-
-  String getFormattedDate() {
-    return DateFormat('EEEE, MMMM dd').format(DateTime.now());
-  }
-  // ── HEADER ───────────────────────────────────────────
-
   Widget _buildHeader() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,7 +194,7 @@ $videoUrl
               ),
               const SizedBox(height: 2),
               Text(
-                '${getFormattedDate()} · ${getGreeting()}${_userName.isNotEmpty ? ', $_userName' : ''}',
+                'Monday, March 02 · Good morning${_userName.isNotEmpty ? ', $_userName' : ''}',
                 style: inter(fontSize: 11, color: AppColors.textSecondary),
               ),
             ],
@@ -420,9 +258,6 @@ $videoUrl
       ],
     );
   }
-
-  // ── HERO STATUS CARD ─────────────────────────────────
-
   Widget _buildHeroCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -473,12 +308,8 @@ $videoUrl
                       children: [
                         const TextSpan(text: 'System '),
                         TextSpan(
-                          text: _isMonitoring ? 'Active' : 'Inactive',
-                          style: TextStyle(
-                            color: _isMonitoring
-                                ? AppColors.green
-                                : AppColors.red,
-                          ),
+                          text: 'Active',
+                          style: TextStyle(color: AppColors.green),
                         ),
                       ],
                     ),
@@ -494,11 +325,9 @@ $videoUrl
                       icon: '📷',
                       iconColor: AppColors.bluePrimary,
                       name: 'CAMERA',
-                      value: _isMonitoring ? 'Running' : 'Stopped',
-                      badge: _isMonitoring ? '● OK' : '● OFF',
-                      badgeColor: _isMonitoring
-                          ? AppColors.green
-                          : AppColors.red,
+                      value: 'Running',
+                      badge: '● OK',
+                      badgeColor: AppColors.green,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -507,19 +336,9 @@ $videoUrl
                       icon: '🛰',
                       iconColor: AppColors.green,
                       name: 'GPS SIGNAL',
-                      value: !_isMonitoring
-                          ? 'Idle'
-                          : (_latitude != null && _longitude != null
-                                ? 'Fixed'
-                                : 'Searching'),
-                      badge: !_isMonitoring
-                          ? '● OFF'
-                          : (_latitude != null ? '● OK' : '● WAIT'),
-                      badgeColor: !_isMonitoring
-                          ? AppColors.red
-                          : (_latitude != null
-                                ? AppColors.green
-                                : AppColors.amber),
+                      value: 'Fixed',
+                      badge: '4 SAT',
+                      badgeColor: AppColors.blueLight,
                     ),
                   ),
                 ],
@@ -530,10 +349,7 @@ $videoUrl
       ),
     );
   }
-
   Widget _buildLivePill() {
-    if (!_isMonitoring) return const SizedBox(); // hide when not monitoring
-
     return AnimatedBuilder(
       animation: _pulseCtrl,
       builder: (_, _) => Container(
@@ -570,7 +386,6 @@ $videoUrl
       ),
     );
   }
-
   Widget _buildSensorTile({
     required String icon,
     required Color iconColor,
@@ -643,30 +458,10 @@ $videoUrl
       ),
     );
   }
-
-  String formatUptime(Duration d) {
-    if (d.inHours > 0) {
-      return '${d.inHours}h';
-    } else if (d.inMinutes > 0) {
-      return '${d.inMinutes}m';
-    } else {
-      return '${d.inSeconds}s';
-    }
-  }
-  // ── MONITOR BUTTON ───────────────────────────────────
-
   Future<void> _onMonitorTap() async {
     if (_monitorLoading) return;
-
     final uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown_user';
-
     if (_isMonitoring) {
-      // ── STOP ────────────────────────────────────────
-      _uptimeTimer?.cancel();
-
-      setState(() {
-        _uptime = Duration.zero;
-      });
       setState(() => _monitorLoading = true);
       try {
         await MonitoringService.stopMonitoring(uid);
@@ -674,7 +469,6 @@ $videoUrl
           setState(() {
             _isMonitoring = false;
             _monitorLoading = false;
-            _stopLocationTracking();
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -682,8 +476,7 @@ $videoUrl
               backgroundColor: AppColors.red,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+                  borderRadius: BorderRadius.circular(12)),
               margin: const EdgeInsets.all(16),
             ),
           );
@@ -697,25 +490,13 @@ $videoUrl
               backgroundColor: AppColors.amber,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+                  borderRadius: BorderRadius.circular(12)),
               margin: const EdgeInsets.all(16),
             ),
           );
         }
       }
     } else {
-      // ── START ───────────────────────────────────────
-      _monitorStartTime = DateTime.now();
-
-      _uptimeTimer?.cancel();
-      _uptimeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (_monitorStartTime != null) {
-          setState(() {
-            _uptime = DateTime.now().difference(_monitorStartTime!);
-          });
-        }
-      });
       setState(() => _monitorLoading = true);
       try {
         await MonitoringService.startMonitoring(uid);
@@ -723,7 +504,6 @@ $videoUrl
           setState(() {
             _isMonitoring = true;
             _monitorLoading = false;
-            _startLocationTracking();
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -731,8 +511,7 @@ $videoUrl
               backgroundColor: AppColors.green,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+                  borderRadius: BorderRadius.circular(12)),
               margin: const EdgeInsets.all(16),
             ),
           );
@@ -746,8 +525,7 @@ $videoUrl
               backgroundColor: AppColors.red,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+                  borderRadius: BorderRadius.circular(12)),
               margin: const EdgeInsets.all(16),
             ),
           );
@@ -755,28 +533,22 @@ $videoUrl
       }
     }
   }
-
   Widget _buildMonitorButton() {
     final isActive = _isMonitoring;
-
-    // Colors
     final gradientColors = isActive
         ? [const Color(0xFF059669), const Color(0xFF10B981)] // green
-        : [AppColors.bluePrimary, const Color(0xFF2563EB)]; // blue
+        : [AppColors.bluePrimary, const Color(0xFF2563EB)];   // blue
     final shadowColor = isActive
         ? AppColors.green.withValues(alpha: 0.40)
         : AppColors.bluePrimary.withValues(alpha: 0.35);
     final iconBg = isActive
         ? Colors.white.withValues(alpha: 0.20)
         : Colors.white.withValues(alpha: 0.15);
-
-    // Labels
     final title = isActive ? 'Monitoring Vehicle' : 'Start Monitoring';
     final subtitle = isActive
         ? 'Dashcam active · Tap to stop'
         : 'All sensors ready · Tap to activate';
     final emoji = isActive ? '🟢' : '🛡️';
-
     return GestureDetector(
       onTap: _onMonitorTap,
       child: AnimatedContainer(
@@ -842,12 +614,12 @@ $videoUrl
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : Text(emoji, style: const TextStyle(fontSize: 18)),
+                      : Text(emoji,
+                          style: const TextStyle(fontSize: 18)),
                 ),
                 const SizedBox(width: 10),
                 Column(
@@ -878,31 +650,17 @@ $videoUrl
       ),
     );
   }
-
-  // ── STATS ROW ────────────────────────────────────────
-
   Widget _buildStatsRow() {
     return Row(
       children: [
-        Expanded(
-          child: _statBox('$_incidentCount', 'INCIDENTS', AppColors.green),
-        ),
+        Expanded(child: _statBox('0', 'INCIDENTS', AppColors.green)),
         const SizedBox(width: 10),
-        Expanded(
-          child: _statBox(
-            '${_accuracy.toStringAsFixed(0)}%',
-            'ACCURACY',
-            AppColors.blueLight,
-          ),
-        ),
+        Expanded(child: _statBox('98%', 'ACCURACY', AppColors.blueLight)),
         const SizedBox(width: 10),
-        Expanded(
-          child: _statBox(formatUptime(_uptime), 'UPTIME', AppColors.amber),
-        ),
+        Expanded(child: _statBox('24h', 'UPTIME', AppColors.amber)),
       ],
     );
   }
-
   Widget _statBox(String value, String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
@@ -937,28 +695,6 @@ $videoUrl
       ),
     );
   }
-
-  Future<void> _openMap(double lat, double lng) async {
-    final Uri googleMapUrl = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
-    );
-
-    if (await canLaunchUrl(googleMapUrl)) {
-      await launchUrl(googleMapUrl, mode: LaunchMode.externalApplication);
-    } else {
-      throw 'Could not open map';
-    }
-  }
-
-  String formatLatitude(double lat) {
-    return '${lat.toStringAsFixed(4)}° ${lat >= 0 ? 'N' : 'S'}';
-  }
-
-  String formatLongitude(double lng) {
-    return '${lng.toStringAsFixed(4)}° ${lng >= 0 ? 'E' : 'W'}';
-  }
-  // ── LIVE LOCATION CARD ───────────────────────────────
-
   Widget _buildLocationCard() {
     return _card(
       child: Column(
@@ -970,11 +706,7 @@ $videoUrl
             iconBg: AppColors.bluePrimary.withValues(alpha: 0.15),
             title: 'Live Location',
             action: 'Open Map',
-            onPressed: () {
-              if (_latitude != null && _longitude != null) {
-                _openMap(_latitude!, _longitude!);
-              }
-            },
+            onPressed: () {},
           ),
           const SizedBox(height: 14),
           // Map placeholder
@@ -1070,26 +802,14 @@ $videoUrl
             ),
           ),
           const SizedBox(height: 12),
-          // Coordinates
           Row(
             children: [
-              Expanded(
-                child: _coordBox(
-                  'Latitude',
-                  _latitude != null ? formatLatitude(_latitude!) : '--',
-                ),
-              ),
+              Expanded(child: _coordBox('Latitude', '37.7749° N')),
               const SizedBox(width: 8),
-              Expanded(
-                child: _coordBox(
-                  'Longitude',
-                  _longitude != null ? formatLongitude(_longitude!) : '--',
-                ),
-              ),
+              Expanded(child: _coordBox('Longitude', '122.4194° W')),
             ],
           ),
           const SizedBox(height: 8),
-          // GPS status row
           Row(
             children: [
               AnimatedBuilder(
@@ -1128,7 +848,6 @@ $videoUrl
       ),
     );
   }
-
   Widget _ringWidget(double size, double t) {
     final opacity = (1.0 - t).clamp(0.0, 1.0);
     return Transform.scale(
@@ -1146,7 +865,6 @@ $videoUrl
       ),
     );
   }
-
   Widget _coordBox(String label, String value) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1173,9 +891,6 @@ $videoUrl
       ),
     );
   }
-
-  // ── EMERGENCY CONTACTS CARD ──────────────────────────
-
   Widget _buildEmergencyContactsCard(BuildContext context) {
     final colors = [
       [const Color(0xFFEF4444), const Color(0xFFDC2626)],
@@ -1185,14 +900,7 @@ $videoUrl
       [const Color(0xFF10B981), const Color(0xFF059669)],
     ];
     final emojis = ['👩', '👨', '👧', '👦', '🧑'];
-    final priorityColors = [
-      AppColors.red,
-      AppColors.amber,
-      const Color(0xFF8B5CF6),
-      AppColors.blueLight,
-      AppColors.green,
-    ];
-
+    final priorityColors = [AppColors.red, AppColors.amber, const Color(0xFF8B5CF6), AppColors.blueLight, AppColors.green];
     return _card(
       child: Column(
         children: [
@@ -1211,7 +919,6 @@ $videoUrl
             },
           ),
           const SizedBox(height: 4),
-          // Dynamic contacts from Firestore
           ..._contactsList.asMap().entries.map((e) {
             final i = e.key;
             final c = e.value;
@@ -1249,7 +956,6 @@ $videoUrl
       ),
     );
   }
-
   Widget _contactTile({
     required String emoji,
     required List<Color> gradient,
@@ -1348,12 +1054,6 @@ $videoUrl
       ),
     );
   }
-
-  String getCurrentTime() {
-    return DateFormat('hh:mm a').format(DateTime.now());
-  }
-  // ── LAST INCIDENT CARD ───────────────────────────────
-
   Widget _buildIncidentCard() {
     return _card(
       child: Column(
@@ -1430,7 +1130,7 @@ $videoUrl
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      getCurrentTime(),
+                      '09:41 AM',
                       style: inter(
                         fontSize: 11,
                         color: AppColors.textSecondary,
@@ -1453,9 +1153,6 @@ $videoUrl
       ),
     );
   }
-
-  // ── SHARED CARD HELPERS ──────────────────────────────
-
   Widget _card({required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -1467,7 +1164,6 @@ $videoUrl
       child: child,
     );
   }
-
   Widget _cardHeader({
     required BuildContext context,
     required String icon,
@@ -1512,16 +1208,12 @@ $videoUrl
       ],
     );
   }
-
-  // ── BOTTOM NAVIGATION ────────────────────────────────
-
   Widget _buildBottomNav() {
     final items = [
       {'icon': '🏠', 'label': 'Home'},
       {'icon': '📋', 'label': 'History'},
       {'icon': '👤', 'label': 'Profile'},
     ];
-
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF0A1628).withValues(alpha: 0.95),
@@ -1559,17 +1251,7 @@ $videoUrl
                 children: List.generate(items.length, (i) {
                   final active = _navIndex == i;
                   return GestureDetector(
-                    onTap: () {
-                      setState(() => _navIndex = i);
-                      if (i == 2) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProfileScreen(),
-                          ),
-                        );
-                      }
-                    },
+                    onTap: () => setState(() => _navIndex = i),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(
@@ -1617,11 +1299,6 @@ $videoUrl
     );
   }
 }
-
-// ══════════════════════════════════════════════════════
-// CUSTOM PAINTERS
-// ══════════════════════════════════════════════════════
-
 class _MapGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -1637,7 +1314,6 @@ class _MapGridPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
   }
-
   @override
   bool shouldRepaint(_MapGridPainter old) => false;
 }

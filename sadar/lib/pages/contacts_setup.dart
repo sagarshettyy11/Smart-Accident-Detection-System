@@ -44,7 +44,8 @@ class ContactsSetupScreen extends StatefulWidget {
   State<ContactsSetupScreen> createState() => _ContactsSetupScreenState();
 }
 
-class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerProviderStateMixin {
+class _ContactsSetupScreenState extends State<ContactsSetupScreen>
+    with TickerProviderStateMixin {
   bool _smsOnDetection = true;
   bool _autoCallP1 = true;
   bool _shareLiveLocation = false;
@@ -52,14 +53,32 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
   late AnimationController _fadeCtrl;
   late List<Animation<double>> _anims;
   final List<_ContactEntry> _contacts = [];
-  final _avatarEmojis = ['👩', '👨', '👧', '👦', '👩‍⚕️', '👨‍⚕️', '👴', '👵', '🧑'];
-  final _avatarColors = [Color(0xFFEF4444), Color(0xFFF59E0B), Color(0xFF8B5CF6), Color(0xFF3B82F6), Color(0xFF10B981)];
+  final _avatarEmojis = [
+    '👩',
+    '👨',
+    '👧',
+    '👦',
+    '👩‍⚕️',
+    '👨‍⚕️',
+    '👴',
+    '👵',
+    '🧑',
+  ];
+  final _avatarColors = [
+    Color(0xFFEF4444),
+    Color(0xFFF59E0B),
+    Color(0xFF8B5CF6),
+    Color(0xFF3B82F6),
+    Color(0xFF10B981),
+  ];
   int _idCounter = 2;
-
   @override
   void initState() {
     super.initState();
-    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
     _anims = List.generate(9, (i) {
       final s = (i * 0.07).clamp(0.0, 1.0);
       return CurvedAnimation(
@@ -69,55 +88,74 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
     });
     _fadeCtrl.forward();
   }
-
   @override
   void dispose() {
     _fadeCtrl.dispose();
     super.dispose();
   }
-
   Widget _fs(int i, Widget child) => FadeTransition(
     opacity: _anims[i],
     child: SlideTransition(
-      position: Tween(begin: const Offset(0, 0.12), end: Offset.zero).animate(_anims[i]),
+      position: Tween(
+        begin: const Offset(0, 0.12),
+        end: Offset.zero,
+      ).animate(_anims[i]),
       child: child,
     ),
   );
-
   Future<void> _handleFinish() async {
     HapticFeedback.mediumImpact();
     setState(() => _isLoading = true);
     try {
+      // Save all contacts to Firestore
       for (final c in _contacts) {
-        await FirestoreService.addEmergencyContact({'name': c.name, 'phone': c.phone, 'relationship': c.relation});
+        await FirestoreService.addEmergencyContact({
+          'name': c.name,
+          'phone': c.phone,
+          'relationship': c.relation,
+        });
       }
       if (!mounted) return;
-      Navigator.of(
-        context,
-      ).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const DashboardScreen()), (route) => false);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        (route) => false,
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error saving contacts: $e'), backgroundColor: const Color(0xFFEF4444)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving contacts: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _C.bg,
       body: Stack(
         children: [
-          Positioned(top: -60, right: -60, child: _Glow(color: _C.red, size: 240, opacity: 0.09)),
-          Positioned(bottom: 100, left: -60, child: _Glow(color: _C.bluePrimary, size: 200, opacity: 0.1)),
-
+          Positioned(
+            top: -60,
+            right: -60,
+            child: _Glow(color: _C.red, size: 240, opacity: 0.09),
+          ),
+          Positioned(
+            bottom: 100,
+            left: -60,
+            child: _Glow(color: _C.bluePrimary, size: 200, opacity: 0.1),
+          ),
           SafeArea(
             child: Column(
               children: [
-                Padding(padding: const EdgeInsets.fromLTRB(24, 14, 24, 0), child: _fs(0, _buildTopBar())),
+                // ── Fixed header ─────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+                  child: _fs(0, _buildTopBar()),
+                ),
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -131,7 +169,6 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Welcome
                         _fs(1, _buildWelcomeText()),
                         const SizedBox(height: 20),
                         _fs(1, _buildSectionLabel('Auto Dispatch')),
@@ -143,12 +180,18 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _buildSectionLabel('Your Contacts (${_contacts.length})'),
+                              _buildSectionLabel(
+                                'Your Contacts (${_contacts.length})',
+                              ),
                               GestureDetector(
                                 onTap: () => _showAddContactSheet(context),
                                 child: Text(
                                   '+ Add',
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _C.blueLight),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: _C.blueLight,
+                                  ),
                                 ),
                               ),
                             ],
@@ -162,8 +205,10 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
                               padding: const EdgeInsets.only(bottom: 10),
                               child: _ContactCard(
                                 contact: e.value,
-                                onDelete: () => setState(() => _contacts.remove(e.value)),
-                                onNotifyToggle: (v) => setState(() => e.value.notifyOnSOS = v),
+                                onDelete: () =>
+                                    setState(() => _contacts.remove(e.value)),
+                                onNotifyToggle: (v) =>
+                                    setState(() => e.value.notifyOnSOS = v),
                               ),
                             ),
                           ),
@@ -181,7 +226,8 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
                             title: 'SMS on Detection',
                             subtitle: 'Send text with GPS link to all contacts',
                             value: _smsOnDetection,
-                            onChanged: (v) => setState(() => _smsOnDetection = v),
+                            onChanged: (v) =>
+                                setState(() => _smsOnDetection = v),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -207,11 +253,18 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
                             title: 'Share Live Location',
                             subtitle: 'Continuous GPS until help arrives',
                             value: _shareLiveLocation,
-                            onChanged: (v) => setState(() => _shareLiveLocation = v),
+                            onChanged: (v) =>
+                                setState(() => _shareLiveLocation = v),
                           ),
                         ),
                         const SizedBox(height: 24),
-                        _fs(7, _FinishButton(isLoading: _isLoading, onTap: _handleFinish)),
+                        _fs(
+                          7,
+                          _FinishButton(
+                            isLoading: _isLoading,
+                            onTap: _handleFinish,
+                          ),
+                        ),
                         const SizedBox(height: 14),
                         _fs(
                           8,
@@ -220,12 +273,18 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
                             child: const Center(
                               child: Text.rich(
                                 TextSpan(
-                                  style: TextStyle(fontSize: 12, color: _C.textMuted),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: _C.textMuted,
+                                  ),
                                   children: [
                                     TextSpan(text: 'Want more coverage? '),
                                     TextSpan(
                                       text: 'Add another contact',
-                                      style: TextStyle(color: _C.blueLight, fontWeight: FontWeight.w600),
+                                      style: TextStyle(
+                                        color: _C.blueLight,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -244,7 +303,6 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
       ),
     );
   }
-
   Widget _buildTopBar() {
     return Row(
       children: [
@@ -258,13 +316,22 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: _C.border),
             ),
-            child: const Icon(Icons.arrow_back_ios_new_rounded, color: _C.textSecondary, size: 16),
+            child: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: _C.textSecondary,
+              size: 16,
+            ),
           ),
         ),
         const Spacer(),
         const Text(
           'Emergency Contacts',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _C.textPrimary, letterSpacing: -0.3),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: _C.textPrimary,
+            letterSpacing: -0.3,
+          ),
         ),
         const Spacer(),
         Container(
@@ -276,13 +343,16 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
           ),
           child: const Text(
             'Step 3 of 3',
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _C.green),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: _C.green,
+            ),
           ),
         ),
       ],
     );
   }
-
   Widget _buildWelcomeText() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -305,12 +375,16 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
       ],
     );
   }
-
   Widget _buildSOSCard() {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [_C.red.withValues(alpha: 0.09), _C.red.withValues(alpha: 0.04)]),
+        gradient: LinearGradient(
+          colors: [
+            _C.red.withValues(alpha: 0.09),
+            _C.red.withValues(alpha: 0.04),
+          ],
+        ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _C.red.withValues(alpha: 0.22)),
       ),
@@ -319,8 +393,13 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
           Container(
             width: 46,
             height: 46,
-            decoration: BoxDecoration(color: _C.red.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
-            child: const Center(child: Text('🚑', style: TextStyle(fontSize: 22))),
+            decoration: BoxDecoration(
+              color: _C.red.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Center(
+              child: Text('🚑', style: TextStyle(fontSize: 22)),
+            ),
           ),
           const SizedBox(width: 13),
           Expanded(
@@ -329,12 +408,20 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
               children: [
                 const Text(
                   'Emergency Services',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _C.textPrimary),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _C.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 3),
                 const Text(
                   '911 auto-dispatched on detection\nLocation sent automatically',
-                  style: TextStyle(fontSize: 11, color: _C.textSecondary, height: 1.45),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: _C.textSecondary,
+                    height: 1.45,
+                  ),
                 ),
               ],
             ),
@@ -349,14 +436,18 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
             ),
             child: const Text(
               'AUTO',
-              style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: _C.red, letterSpacing: 0.5),
+              style: TextStyle(
+                fontSize: 8,
+                fontWeight: FontWeight.w800,
+                color: _C.red,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ],
       ),
     );
   }
-
   Widget _buildAddTile() {
     return GestureDetector(
       onTap: () => _showAddContactSheet(context),
@@ -365,7 +456,10 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
         decoration: BoxDecoration(
           color: _C.cardBg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _C.blueLight.withValues(alpha: 0.3), style: BorderStyle.solid),
+          border: Border.all(
+            color: _C.blueLight.withValues(alpha: 0.3),
+            style: BorderStyle.solid,
+          ),
         ),
         child: Row(
           children: [
@@ -377,7 +471,11 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
                 borderRadius: BorderRadius.circular(13),
                 border: Border.all(color: _C.blueLight.withValues(alpha: 0.25)),
               ),
-              child: const Icon(Icons.person_add_rounded, color: _C.blueLight, size: 20),
+              child: const Icon(
+                Icons.person_add_rounded,
+                color: _C.blueLight,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 13),
             Expanded(
@@ -386,23 +484,38 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
                 children: [
                   const Text(
                     'Add Emergency Contact',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _C.blueLight),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _C.blueLight,
+                    ),
                   ),
                   const SizedBox(height: 2),
-                  Text('Recommended: at least 2–3 contacts', style: TextStyle(fontSize: 11, color: _C.textMuted)),
+                  Text(
+                    'Recommended: at least 2–3 contacts',
+                    style: TextStyle(fontSize: 11, color: _C.textMuted),
+                  ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: _C.blueLight, size: 20),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: _C.blueLight,
+              size: 20,
+            ),
           ],
         ),
       ),
     );
   }
-
   Widget _buildSectionLabel(String label) => Text(
     label,
-    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _C.textMuted, letterSpacing: 1.3),
+    style: const TextStyle(
+      fontSize: 10,
+      fontWeight: FontWeight.w700,
+      color: _C.textMuted,
+      letterSpacing: 1.3,
+    ),
   );
   void _showAddContactSheet(BuildContext context) {
     final nameCtrl = TextEditingController();
@@ -413,7 +526,9 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: const BoxDecoration(
@@ -435,26 +550,47 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
               ),
               const Text(
                 'Add Emergency Contact',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: _C.textPrimary),
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: _C.textPrimary,
+                ),
               ),
               const SizedBox(height: 20),
-              _SheetField(ctrl: nameCtrl, icon: Icons.person_outline_rounded, hint: 'Full Name'),
+              _SheetField(
+                ctrl: nameCtrl,
+                icon: Icons.person_outline_rounded,
+                hint: 'Full Name',
+              ),
               const SizedBox(height: 12),
-              _SheetField(ctrl: phoneCtrl, icon: Icons.phone_outlined, hint: 'Phone Number', type: TextInputType.phone),
+              _SheetField(
+                ctrl: phoneCtrl,
+                icon: Icons.phone_outlined,
+                hint: 'Phone Number',
+                type: TextInputType.phone,
+              ),
               const SizedBox(height: 12),
-              _SheetField(ctrl: relCtrl, icon: Icons.group_outlined, hint: 'Relationship (e.g. Spouse)'),
+              _SheetField(
+                ctrl: relCtrl,
+                icon: Icons.group_outlined,
+                hint: 'Relationship (e.g. Spouse)',
+              ),
               const SizedBox(height: 20),
               GestureDetector(
                 onTap: () {
                   if (nameCtrl.text.isEmpty || phoneCtrl.text.isEmpty) return;
-                  final emoji = _avatarEmojis[_idCounter % _avatarEmojis.length];
-                  final color = _avatarColors[_idCounter % _avatarColors.length];
+                  final emoji =
+                      _avatarEmojis[_idCounter % _avatarEmojis.length];
+                  final color =
+                      _avatarColors[_idCounter % _avatarColors.length];
                   setState(() {
                     _contacts.add(
                       _ContactEntry(
                         id: 'c${_idCounter++}',
                         name: nameCtrl.text,
-                        relation: relCtrl.text.isNotEmpty ? relCtrl.text : 'Contact',
+                        relation: relCtrl.text.isNotEmpty
+                            ? relCtrl.text
+                            : 'Contact',
                         phone: phoneCtrl.text,
                         emoji: emoji,
                         color: color,
@@ -468,7 +604,9 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
                 child: Container(
                   height: 52,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [_C.bluePrimary, Color(0xFF2563EB)]),
+                    gradient: const LinearGradient(
+                      colors: [_C.bluePrimary, Color(0xFF2563EB)],
+                    ),
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
@@ -481,7 +619,11 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
                   child: const Center(
                     child: Text(
                       'Save Contact',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -495,7 +637,6 @@ class _ContactsSetupScreenState extends State<ContactsSetupScreen> with TickerPr
   }
 }
 
-// Reusable Widgets
 class _Glow extends StatelessWidget {
   final Color color;
   final double size, opacity;
@@ -516,12 +657,16 @@ class _Glow extends StatelessWidget {
   );
 }
 
-// Contact card
 class _ContactCard extends StatelessWidget {
   final _ContactEntry contact;
   final VoidCallback onDelete;
   final ValueChanged<bool> onNotifyToggle;
-  const _ContactCard({required this.contact, required this.onDelete, required this.onNotifyToggle});
+
+  const _ContactCard({
+    required this.contact,
+    required this.onDelete,
+    required this.onNotifyToggle,
+  });
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -535,6 +680,7 @@ class _ContactCard extends StatelessWidget {
         children: [
           Row(
             children: [
+              // Avatar + priority badge
               Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -543,13 +689,21 @@ class _ContactCard extends StatelessWidget {
                     height: 46,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [contact.color, contact.color.withValues(alpha: 0.65)],
+                        colors: [
+                          contact.color,
+                          contact.color.withValues(alpha: 0.65),
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Center(child: Text(contact.emoji, style: const TextStyle(fontSize: 20))),
+                    child: Center(
+                      child: Text(
+                        contact.emoji,
+                        style: const TextStyle(fontSize: 20),
+                      ),
+                    ),
                   ),
                   Positioned(
                     top: -4,
@@ -565,7 +719,11 @@ class _ContactCard extends StatelessWidget {
                       child: Center(
                         child: Text(
                           'P${contact.priority}',
-                          style: const TextStyle(fontSize: 7, fontWeight: FontWeight.w800, color: Colors.white),
+                          style: const TextStyle(
+                            fontSize: 7,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -579,14 +737,28 @@ class _ContactCard extends StatelessWidget {
                   children: [
                     Text(
                       contact.name,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _C.textPrimary),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: _C.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 2),
-                    Text(contact.relation, style: const TextStyle(fontSize: 11, color: _C.textSecondary)),
+                    Text(
+                      contact.relation,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: _C.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 1),
                     Text(
                       contact.phone,
-                      style: TextStyle(fontSize: 10, color: _C.textMuted, fontFamily: 'monospace'),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: _C.textMuted,
+                        fontFamily: 'monospace',
+                      ),
                     ),
                   ],
                 ),
@@ -604,7 +776,11 @@ class _ContactCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: _C.red.withValues(alpha: 0.2)),
                   ),
-                  child: Icon(Icons.delete_outline_rounded, color: _C.red, size: 16),
+                  child: Icon(
+                    Icons.delete_outline_rounded,
+                    color: _C.red,
+                    size: 16,
+                  ),
                 ),
               ),
             ],
@@ -619,7 +795,11 @@ class _ContactCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.notifications_outlined, color: contact.notifyOnSOS ? _C.blueLight : _C.textMuted, size: 15),
+                Icon(
+                  Icons.notifications_outlined,
+                  color: contact.notifyOnSOS ? _C.blueLight : _C.textMuted,
+                  size: 15,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -627,7 +807,9 @@ class _ContactCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: contact.notifyOnSOS ? _C.textSecondary : _C.textMuted,
+                      color: contact.notifyOnSOS
+                          ? _C.textSecondary
+                          : _C.textMuted,
                     ),
                   ),
                 ),
@@ -642,16 +824,23 @@ class _ContactCard extends StatelessWidget {
                     height: 22,
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
-                      color: contact.notifyOnSOS ? _C.bluePrimary : Colors.white.withValues(alpha: 0.08),
+                      color: contact.notifyOnSOS
+                          ? _C.bluePrimary
+                          : Colors.white.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(11),
                     ),
                     child: AnimatedAlign(
                       duration: const Duration(milliseconds: 200),
-                      alignment: contact.notifyOnSOS ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment: contact.notifyOnSOS
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
                       child: Container(
                         width: 16,
                         height: 16,
-                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                     ),
                   ),
@@ -694,7 +883,10 @@ class _ToggleRow extends StatelessWidget {
           Container(
             width: 38,
             height: 38,
-            decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(11)),
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(11),
+            ),
             child: Icon(icon, color: iconColor, size: 18),
           ),
           const SizedBox(width: 13),
@@ -704,10 +896,17 @@ class _ToggleRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _C.textPrimary),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _C.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 2),
-                Text(subtitle, style: TextStyle(fontSize: 10, color: _C.textMuted)),
+                Text(
+                  subtitle,
+                  style: TextStyle(fontSize: 10, color: _C.textMuted),
+                ),
               ],
             ),
           ),
@@ -722,7 +921,9 @@ class _ToggleRow extends StatelessWidget {
               height: 26,
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: value ? _C.bluePrimary : Colors.white.withValues(alpha: 0.08),
+                color: value
+                    ? _C.bluePrimary
+                    : Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(13),
               ),
               child: AnimatedAlign(
@@ -734,7 +935,12 @@ class _ToggleRow extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 4)],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 4,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -763,14 +969,23 @@ class _FinishButton extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: _C.green.withValues(alpha: 0.35), blurRadius: 18, offset: const Offset(0, 7))],
+          boxShadow: [
+            BoxShadow(
+              color: _C.green.withValues(alpha: 0.35),
+              blurRadius: 18,
+              offset: const Offset(0, 7),
+            ),
+          ],
         ),
         child: Center(
           child: isLoading
               ? const SizedBox(
                   width: 22,
                   height: 22,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
                 )
               : Row(
                   mainAxisSize: MainAxisSize.min,
@@ -780,9 +995,11 @@ class _FinishButton extends StatelessWidget {
                     InkWell(
                       borderRadius: BorderRadius.circular(12),
                       onTap: () {
-                        Navigator.of(
-                          context,
-                        ).pushReplacement(MaterialPageRoute(builder: (_) => const DashboardScreen()));
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (_) => const DashboardScreen(),
+                          ),
+                        );
                       },
                       child: const Text(
                         'Finish Setup',
@@ -807,7 +1024,12 @@ class _SheetField extends StatelessWidget {
   final IconData icon;
   final String hint;
   final TextInputType type;
-  const _SheetField({required this.ctrl, required this.icon, required this.hint, this.type = TextInputType.text});
+  const _SheetField({
+    required this.ctrl,
+    required this.icon,
+    required this.hint,
+    this.type = TextInputType.text,
+  });
   @override
   Widget build(BuildContext context) => Container(
     height: 50,
@@ -854,7 +1076,6 @@ class _StepIndicator extends StatelessWidget {
       ],
     );
   }
-
   _DS _s(int s) => s < currentStep
       ? _DS.done
       : s == currentStep
@@ -866,14 +1087,16 @@ class _StepIndicator extends StatelessWidget {
       ? _DS.active
       : _DS.inactive;
 }
-
 enum _DS { active, done, inactive }
-
 class _StepDot extends StatelessWidget {
   final int number;
   final String label;
   final _DS state;
-  const _StepDot({required this.number, required this.label, required this.state});
+  const _StepDot({
+    required this.number,
+    required this.label,
+    required this.state,
+  });
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -889,7 +1112,9 @@ class _StepDot extends StatelessWidget {
                 ? _C.green
                 : _C.cardBg,
             shape: BoxShape.circle,
-            border: state == _DS.inactive ? Border.all(color: _C.border, width: 1.5) : null,
+            border: state == _DS.inactive
+                ? Border.all(color: _C.border, width: 1.5)
+                : null,
           ),
           child: Center(
             child: state == _DS.done

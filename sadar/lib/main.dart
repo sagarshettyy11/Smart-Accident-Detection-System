@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sadar/pages/login_page.dart';
 import 'package:sadar/screens/dashboard.dart';
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
@@ -23,7 +22,6 @@ Future<void> main() async {
   }
   runApp(const MyApp());
 }
-
 void testFirebaseConnection() {
   try {
     final user = FirebaseAuth.instance.currentUser;
@@ -33,12 +31,14 @@ void testFirebaseConnection() {
     debugPrint('❌ Firebase connection failed: $e');
   }
 }
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
+    // Check if user is already authenticated
     final currentUser = FirebaseAuth.instance.currentUser;
+
     return MaterialApp(
       title: 'SADAR',
       theme: ThemeData(
@@ -49,11 +49,9 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
 class _ErrorApp extends StatelessWidget {
   final String message;
   const _ErrorApp({required this.message});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

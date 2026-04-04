@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
-
-/// Unified color constants for the SADAR app.
-/// Extracted from duplicated `_C` classes across all pages/screens.
 class AppColors {
-  AppColors._();
-
   static const bg = Color(0xFF060E1D);
   static const bluePrimary = Color(0xFF1A56DB);
   static const blueLight = Color(0xFF3B82F6);

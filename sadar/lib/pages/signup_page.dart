@@ -5,9 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sadar/pages/profile_setup.dart';
 import 'package:sadar/services/firebase_auth_service.dart';
 
-// ─────────────────────────────────────────
-// Color Constants
-// ─────────────────────────────────────────
 class _C {
   static const bg = Color(0xFF060E1D);
   static const bluePrimary = Color(0xFF1A56DB);
@@ -22,18 +19,10 @@ class _C {
   static const border = Color(0x263B82F6);
 }
 
-// ─────────────────────────────────────────
-// SIGN UP SCREEN
-// ─────────────────────────────────────────
 class SignUpScreen extends StatefulWidget {
-  /// Called when user taps "Sign In"
   final VoidCallback? onNavigateToLogin;
-
-  /// Called after successful sign up
   final VoidCallback? onSignUpSuccess;
-
   const SignUpScreen({super.key, this.onNavigateToLogin, this.onSignUpSuccess});
-
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
 }
@@ -45,16 +34,12 @@ class _SignUpScreenState extends State<SignUpScreen>
   final _phoneCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-
   bool _obscurePass = true;
   bool _obscureConfirm = true;
   bool _agreedToTerms = false;
   bool _isLoading = false;
-
   late AnimationController _fadeCtrl;
   late List<Animation<double>> _anims;
-
-  // ── Password strength ─────────────────────
   double get _strength {
     final p = _passCtrl.text;
     if (p.isEmpty) return 0;
@@ -65,14 +50,12 @@ class _SignUpScreenState extends State<SignUpScreen>
     if (p.contains(RegExp(r'[!@#\$\&*~_\-]'))) s += 0.25;
     return s;
   }
-
   Color get _strengthColor {
     if (_strength <= 0.25) return _C.red;
     if (_strength <= 0.50) return _C.amber;
     if (_strength <= 0.75) return _C.blueLight;
     return _C.green;
   }
-
   String get _strengthLabel {
     if (_strength == 0) return '';
     if (_strength <= 0.25) return 'Weak';
@@ -80,7 +63,6 @@ class _SignUpScreenState extends State<SignUpScreen>
     if (_strength <= 0.75) return 'Good';
     return 'Strong';
   }
-
   @override
   void initState() {
     super.initState();
@@ -98,7 +80,6 @@ class _SignUpScreenState extends State<SignUpScreen>
     _fadeCtrl.forward();
     _passCtrl.addListener(() => setState(() {}));
   }
-
   @override
   void dispose() {
     _fadeCtrl.dispose();
@@ -109,7 +90,6 @@ class _SignUpScreenState extends State<SignUpScreen>
     _confirmCtrl.dispose();
     super.dispose();
   }
-
   Widget _fs(int i, Widget child) => FadeTransition(
     opacity: _anims[i],
     child: SlideTransition(
@@ -120,15 +100,12 @@ class _SignUpScreenState extends State<SignUpScreen>
       child: child,
     ),
   );
-
   Future<void> _handleSignUp() async {
     final name = _nameCtrl.text.trim();
     final email = _emailCtrl.text.trim();
     final password = _passCtrl.text.trim();
     final confirm = _confirmCtrl.text.trim();
-
     developer.log('_handleSignUp invoked', name: 'SignUpScreen');
-
     // Validation
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -157,9 +134,7 @@ class _SignUpScreenState extends State<SignUpScreen>
       );
       return;
     }
-
     setState(() => _isLoading = true);
-
     try {
       developer.log('Calling FirebaseAuthService.signUp…', name: 'SignUpScreen');
 
@@ -169,14 +144,11 @@ class _SignUpScreenState extends State<SignUpScreen>
         fullName: name,
         phone: _phoneCtrl.text.trim(),
       );
-
       developer.log(
         'signUp returned – user: ${credential.user?.uid}',
         name: 'SignUpScreen',
       );
-
       if (!mounted) return;
-
       if (credential.user != null) {
         // Firebase creates a session immediately, navigate forward.
         developer.log(
@@ -231,7 +203,6 @@ class _SignUpScreenState extends State<SignUpScreen>
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -239,7 +210,6 @@ class _SignUpScreenState extends State<SignUpScreen>
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          // ── Ambient glows ────────────────────
           Positioned(
             top: -80,
             left: -80,
@@ -250,7 +220,6 @@ class _SignUpScreenState extends State<SignUpScreen>
             right: -80,
             child: _Glow(color: _C.green, size: 220, opacity: 0.07),
           ),
-
           SafeArea(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -259,20 +228,12 @@ class _SignUpScreenState extends State<SignUpScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 24),
-
-                  // ── Back + Logo ──────────────
                   _fs(0, _buildTopBar()),
                   const SizedBox(height: 28),
-
-                  // ── Welcome text ─────────────
                   _fs(1, _buildWelcomeText()),
                   const SizedBox(height: 22),
-
-                  // ── Step indicator ───────────
                   _fs(1, const _StepIndicator(currentStep: 1)),
                   const SizedBox(height: 24),
-
-                  // ── Full name ────────────────
                   _fs(
                     2,
                     _InputField(
@@ -283,8 +244,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                     ),
                   ),
                   const SizedBox(height: 14),
-
-                  // ── Email ────────────────────
                   _fs(
                     2,
                     _InputField(
@@ -296,8 +255,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                     ),
                   ),
                   const SizedBox(height: 14),
-
-                  // ── Phone ────────────────────
                   _fs(
                     3,
                     _InputField(
@@ -309,8 +266,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                     ),
                   ),
                   const SizedBox(height: 14),
-
-                  // ── Password ─────────────────
                   _fs(
                     3,
                     _InputField(
@@ -335,8 +290,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                       ),
                     ),
                   ),
-
-                  // ── Strength bar ─────────────
                   if (_passCtrl.text.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     _fs(
@@ -349,8 +302,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                     ),
                   ],
                   const SizedBox(height: 14),
-
-                  // ── Confirm password ─────────
                   _fs(
                     4,
                     _InputField(
@@ -376,12 +327,8 @@ class _SignUpScreenState extends State<SignUpScreen>
                     ),
                   ),
                   const SizedBox(height: 22),
-
-                  // ── Terms checkbox ───────────
                   _fs(5, _buildTermsRow()),
                   const SizedBox(height: 28),
-
-                  // ── Sign up button ───────────
                   _fs(
                     6,
                     _PrimaryButton(
@@ -393,8 +340,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // ── Sign in link ─────────────
                   _fs(7, _buildSignInLink()),
                   const SizedBox(height: 40),
                 ],
@@ -405,13 +350,10 @@ class _SignUpScreenState extends State<SignUpScreen>
       ),
     );
   }
-
-  // ── Top Bar ──────────────────────────────
   Widget _buildTopBar() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Back button
         GestureDetector(
           onTap: widget.onNavigateToLogin,
           child: Container(
@@ -429,8 +371,6 @@ class _SignUpScreenState extends State<SignUpScreen>
             ),
           ),
         ),
-
-        // Logo chip
         Row(
           children: [
             Container(
@@ -477,8 +417,6 @@ class _SignUpScreenState extends State<SignUpScreen>
       ],
     );
   }
-
-  // ── Welcome text ─────────────────────────
   Widget _buildWelcomeText() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,8 +439,6 @@ class _SignUpScreenState extends State<SignUpScreen>
       ],
     );
   }
-
-  // ── Terms row ────────────────────────────
   Widget _buildTermsRow() {
     return GestureDetector(
       onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
@@ -572,8 +508,6 @@ class _SignUpScreenState extends State<SignUpScreen>
       ),
     );
   }
-
-  // ── Sign in link ─────────────────────────
   Widget _buildSignInLink() {
     return Center(
       child: GestureDetector(
@@ -597,17 +531,10 @@ class _SignUpScreenState extends State<SignUpScreen>
     );
   }
 }
-
-// ═════════════════════════════════════════
-// Reusable Widgets (shared across screens)
-// ═════════════════════════════════════════
-
-// Ambient radial glow
 class _Glow extends StatelessWidget {
   final Color color;
   final double size, opacity;
   const _Glow({required this.color, required this.size, required this.opacity});
-
   @override
   Widget build(BuildContext context) => Container(
     width: size,
@@ -623,8 +550,6 @@ class _Glow extends StatelessWidget {
     ),
   );
 }
-
-// Focused input field with animated border
 class _InputField extends StatefulWidget {
   final TextEditingController controller;
   final String label, hint;
@@ -632,7 +557,6 @@ class _InputField extends StatefulWidget {
   final TextInputType keyboardType;
   final bool obscure;
   final Widget? suffix;
-
   const _InputField({
     required this.controller,
     required this.label,
@@ -642,14 +566,11 @@ class _InputField extends StatefulWidget {
     this.obscure = false,
     this.suffix,
   });
-
   @override
   State<_InputField> createState() => _InputFieldState();
 }
-
 class _InputFieldState extends State<_InputField> {
   bool _focused = false;
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -722,15 +643,12 @@ class _InputFieldState extends State<_InputField> {
     );
   }
 }
-
-// Gradient primary button with disabled state
 class _PrimaryButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool isLoading;
   final bool disabled;
   final VoidCallback? onTap;
-
   const _PrimaryButton({
     required this.label,
     required this.icon,
@@ -738,7 +656,6 @@ class _PrimaryButton extends StatelessWidget {
     this.disabled = false,
     this.onTap,
   });
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -797,13 +714,9 @@ class _PrimaryButton extends StatelessWidget {
     );
   }
 }
-
-// 3-step progress indicator
 class _StepIndicator extends StatelessWidget {
   final int currentStep; // 1, 2, or 3
-
   const _StepIndicator({required this.currentStep});
-
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -816,33 +729,27 @@ class _StepIndicator extends StatelessWidget {
       ],
     );
   }
-
   _DotState _stepState(int step) {
     if (step < currentStep) return _DotState.done;
     if (step == currentStep) return _DotState.active;
     return _DotState.inactive;
   }
 }
-
 enum _DotState { active, done, inactive }
-
 class _StepDot extends StatelessWidget {
   final int number;
   final String label;
   final _DotState state;
-
   const _StepDot({
     required this.number,
     required this.label,
     required this.state,
   });
-
   @override
   Widget build(BuildContext context) {
     final isActive = state == _DotState.active;
     final isDone = state == _DotState.done;
     final isInactive = state == _DotState.inactive;
-
     return Column(
       children: [
         AnimatedContainer(
@@ -891,7 +798,6 @@ class _StepDot extends StatelessWidget {
 class _StepLine extends StatelessWidget {
   final bool active;
   const _StepLine({required this.active});
-
   @override
   Widget build(BuildContext context) => Container(
     height: 1.5,
@@ -903,18 +809,15 @@ class _StepLine extends StatelessWidget {
   );
 }
 
-// Animated password strength bar
 class _PasswordStrengthBar extends StatelessWidget {
   final double strength;
   final Color color;
   final String label;
-
   const _PasswordStrengthBar({
     required this.strength,
     required this.color,
     required this.label,
   });
-
   @override
   Widget build(BuildContext context) {
     return Row(

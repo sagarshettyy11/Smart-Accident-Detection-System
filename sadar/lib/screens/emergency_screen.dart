@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sadar/services/firestore_service.dart';
 
-// ─────────────────────────────────────────
-// Color Constants
-// ─────────────────────────────────────────
 class _C {
   static const bg = Color(0xFF060E1D);
   static const bluePrimary = Color(0xFF1A56DB);
@@ -20,9 +17,6 @@ class _C {
   static const border = Color(0x263B82F6);
 }
 
-// ─────────────────────────────────────────
-// Contact Model
-// ─────────────────────────────────────────
 class EmergencyContact {
   final String name;
   final String relation;
@@ -33,7 +27,6 @@ class EmergencyContact {
   final Color priorityColor;
   bool notifyOnSOS;
   String? firestoreId;
-
   EmergencyContact({
     required this.name,
     required this.relation,
@@ -47,12 +40,8 @@ class EmergencyContact {
   });
 }
 
-// ─────────────────────────────────────────
-// Emergency Contacts Screen
-// ─────────────────────────────────────────
 class EmergencyContactsScreen extends StatefulWidget {
   const EmergencyContactsScreen({super.key});
-
   @override
   State<EmergencyContactsScreen> createState() =>
       _EmergencyContactsScreenState();
@@ -64,12 +53,9 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
   String _searchQuery = '';
   bool _autoNotifyAll = true;
   String _timeoutSetting = '2 minutes';
-
   late AnimationController _fadeCtrl;
   late List<Animation<double>> _anims;
-
   final List<EmergencyContact> _contacts = [];
-
   List<EmergencyContact> get _filtered => _searchQuery.isEmpty
       ? _contacts
       : _contacts
@@ -79,7 +65,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
                   c.relation.toLowerCase().contains(_searchQuery.toLowerCase()),
             )
             .toList();
-
   @override
   void initState() {
     super.initState();
@@ -110,16 +95,18 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
         setState(() {
           _contacts.clear();
           for (var i = 0; i < data.length; i++) {
-            _contacts.add(EmergencyContact(
-              name: data[i]['name'] as String? ?? '',
-              relation: data[i]['relationship'] as String? ?? 'Contact',
-              phone: data[i]['phone'] as String? ?? '',
-              emoji: emojis[i % emojis.length],
-              avatarColor: colors[i % colors.length],
-              priority: i + 1,
-              priorityColor: colors[i % colors.length],
-              firestoreId: data[i]['id'] as String?,
-            ));
+            _contacts.add(
+              EmergencyContact(
+                name: data[i]['name'] as String? ?? '',
+                relation: data[i]['relationship'] as String? ?? 'Contact',
+                phone: data[i]['phone'] as String? ?? '',
+                emoji: emojis[i % emojis.length],
+                avatarColor: colors[i % colors.length],
+                priority: i + 1,
+                priorityColor: colors[i % colors.length],
+                firestoreId: data[i]['id'] as String?,
+              ),
+            );
           }
         });
       }
@@ -145,7 +132,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
       child: child,
     ),
   );
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -163,7 +149,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
             left: -60,
             child: _Glow(color: _C.bluePrimary, size: 200, opacity: 0.1),
           ),
-
           SafeArea(
             child: CustomScrollView(
               physics: const BouncingScrollPhysics(),
@@ -172,21 +157,14 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
                   padding: const EdgeInsets.fromLTRB(22, 14, 22, 28),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      // ── Top bar ─────────────────
                       _fs(0, _buildTopBar()),
                       const SizedBox(height: 20),
-
-                      // ── Search ──────────────────
                       _fs(1, _buildSearchBox()),
                       const SizedBox(height: 20),
-
-                      // ── Auto Dispatch ────────────
                       _fs(2, _buildSectionLabel('Auto Dispatch')),
                       const SizedBox(height: 10),
                       _fs(2, _buildSOSCard()),
                       const SizedBox(height: 20),
-
-                      // ── Contacts list ────────────
                       _fs(
                         3,
                         _buildSectionLabel(
@@ -194,7 +172,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
                         ),
                       ),
                       const SizedBox(height: 10),
-
                       ..._filtered.asMap().entries.map(
                         (e) => _fs(
                           4 + (e.key % 3),
@@ -212,22 +189,14 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
                           ),
                         ),
                       ),
-
-                      // Empty state
                       if (_filtered.isEmpty) _fs(4, _buildEmptyState()),
-
-                      // ── Add Contact ──────────────
                       const SizedBox(height: 4),
                       _fs(6, _buildAddContactTile()),
                       const SizedBox(height: 20),
-
-                      // ── Alert Settings ───────────
                       _fs(7, _buildSectionLabel('Alert Settings')),
                       const SizedBox(height: 10),
                       _fs(7, _buildAlertSettings()),
                       const SizedBox(height: 20),
-
-                      // ── SOS Info Banner ──────────
                       _fs(8, _buildSOSBanner()),
                     ]),
                   ),
@@ -239,8 +208,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
       ),
     );
   }
-
-  // ── Top Bar ──────────────────────────────
   Widget _buildTopBar() {
     return Row(
       children: [
@@ -292,8 +259,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
       ],
     );
   }
-
-  // ── Search ───────────────────────────────
   Widget _buildSearchBox() {
     return Container(
       height: 48,
@@ -334,8 +299,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
       ),
     );
   }
-
-  // ── Section Label ────────────────────────
   Widget _buildSectionLabel(String label) => Text(
     label,
     style: const TextStyle(
@@ -345,8 +308,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
       letterSpacing: 1.2,
     ),
   );
-
-  // ── SOS Auto Dispatch Card ───────────────
   Widget _buildSOSCard() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -421,8 +382,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
       ),
     );
   }
-
-  // ── Add Contact Tile ─────────────────────
   Widget _buildAddContactTile() {
     return GestureDetector(
       onTap: () => _showAddContactSheet(context),
@@ -479,8 +438,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
       ),
     );
   }
-
-  // ── Alert Settings ───────────────────────
   Widget _buildAlertSettings() {
     return Container(
       decoration: BoxDecoration(
@@ -570,14 +527,11 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
               ],
             ),
           ),
-
           Divider(
             height: 1,
             thickness: 1,
             color: Colors.white.withValues(alpha: 0.05),
           ),
-
-          // Timeout setting
           GestureDetector(
             onTap: () => _showTimeoutPicker(context),
             child: Padding(
@@ -627,14 +581,11 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
               ),
             ),
           ),
-
           Divider(
             height: 1,
             thickness: 1,
             color: Colors.white.withValues(alpha: 0.05),
           ),
-
-          // Notification method
           GestureDetector(
             onTap: () {},
             child: Padding(
@@ -688,8 +639,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
       ),
     );
   }
-
-  // ── SOS Info Banner ──────────────────────
   Widget _buildSOSBanner() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -721,8 +670,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
       ),
     );
   }
-
-  // ── Empty State ──────────────────────────
   Widget _buildEmptyState() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24),
@@ -747,13 +694,10 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
       ),
     );
   }
-
-  // ── Add Contact Bottom Sheet ─────────────
   void _showAddContactSheet(BuildContext context) {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     final relCtrl = TextEditingController();
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -772,7 +716,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle
               Center(
                 child: Container(
                   width: 40,
@@ -880,8 +823,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
       ),
     );
   }
-
-  // ── Timeout Picker ───────────────────────
   void _showTimeoutPicker(BuildContext context) {
     final options = ['1 minute', '2 minutes', '3 minutes', '5 minutes'];
     showModalBottomSheet(
@@ -977,21 +918,15 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen>
     );
   }
 }
-
-// ─────────────────────────────────────────
-// Contact Card Widget
-// ─────────────────────────────────────────
 class _ContactCard extends StatelessWidget {
   final EmergencyContact contact;
   final ValueChanged<bool> onNotifyToggle;
   final VoidCallback onDelete;
-
   const _ContactCard({
     required this.contact,
     required this.onNotifyToggle,
     required this.onDelete,
   });
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1056,8 +991,6 @@ class _ContactCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(width: 13),
-
-              // Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1090,8 +1023,6 @@ class _ContactCard extends StatelessWidget {
                   ],
                 ),
               ),
-
-              // Action buttons
               Row(
                 children: [
                   _ActionBtn(
@@ -1121,8 +1052,6 @@ class _ContactCard extends StatelessWidget {
               ),
             ],
           ),
-
-          // Notify toggle strip
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1190,7 +1119,6 @@ class _ContactCard extends StatelessWidget {
       ),
     );
   }
-
   void _showContactOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -1251,10 +1179,6 @@ class _ContactCard extends StatelessWidget {
     );
   }
 }
-
-// ═════════════════════════════════════════
-// Reusable Sub-Widgets
-// ═════════════════════════════════════════
 
 class _Glow extends StatelessWidget {
   final Color color;

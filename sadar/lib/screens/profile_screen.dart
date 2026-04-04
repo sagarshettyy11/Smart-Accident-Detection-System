@@ -4,9 +4,6 @@ import 'package:sadar/pages/login_page.dart';
 import 'package:sadar/services/firebase_auth_service.dart';
 import 'package:sadar/services/firestore_service.dart';
 
-// ─────────────────────────────────────────
-// Color Constants
-// ─────────────────────────────────────────
 class _C {
   static const bg = Color(0xFF060E1D);
   static const bluePrimary = Color(0xFF1A56DB);
@@ -22,28 +19,19 @@ class _C {
   static const border = Color(0x263B82F6);
 }
 
-// ─────────────────────────────────────────
-// Profile Screen
-// ─────────────────────────────────────────
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
-
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen>
     with TickerProviderStateMixin {
-  // Notification toggles
   bool _emergencyAlerts = true;
   bool _systemReports = true;
   bool _locationSharing = false;
-
-  // Edit mode
   bool _isEditing = false;
   bool _isSaving = false;
-
-  // User data from Firestore
   String _userName = '';
   String _userInitials = '';
   String _userEmail = '';
@@ -51,13 +39,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   String _userAddress = '';
   String _bloodGroup = '';
   int _contactCount = 0;
-
-  // Vehicle data
   String _vehicleModel = '';
   String _vehicleNumber = '';
   String _vehicleType = '';
-
-  // Text editing controllers
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
@@ -65,10 +49,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   final _vehicleModelCtrl = TextEditingController();
   final _vehicleNumberCtrl = TextEditingController();
   final _vehicleTypeCtrl = TextEditingController();
-
   late AnimationController _fadeCtrl;
   late List<Animation<double>> _anims;
-
   @override
   void initState() {
     super.initState();
@@ -92,28 +74,40 @@ class _ProfileScreenState extends State<ProfileScreen>
     final contacts = await FirestoreService.getEmergencyContacts();
     final vehicle = await FirestoreService.getVehicle();
     final user = FirebaseAuthService.currentUser;
-
     if (mounted && profile != null) {
-      final name = profile['full_name'] as String? ?? profile['fullName'] as String? ?? '';
+      final name =
+          profile['full_name'] as String? ??
+          profile['fullName'] as String? ??
+          '';
       setState(() {
         _userName = name;
         _userInitials = name.isNotEmpty
-            ? name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').take(2).join().toUpperCase()
+            ? name
+                  .split(' ')
+                  .map((w) => w.isNotEmpty ? w[0] : '')
+                  .take(2)
+                  .join()
+                  .toUpperCase()
             : '?';
         _userEmail = user?.email ?? '';
         _userPhone = profile['phone'] as String? ?? '';
         _userAddress = profile['address'] as String? ?? '';
         _bloodGroup = profile['blood_group'] as String? ?? '';
         _contactCount = contacts.length;
-
-        // Vehicle data
         if (vehicle != null) {
-          _vehicleModel = vehicle['car_model'] as String? ?? vehicle['vehicleModel'] as String? ?? '';
-          _vehicleNumber = vehicle['licence_number'] as String? ?? vehicle['vehicleNumber'] as String? ?? '';
-          _vehicleType = vehicle['vehicleType'] as String? ?? vehicle['car_colour'] as String? ?? '';
+          _vehicleModel =
+              vehicle['car_model'] as String? ??
+              vehicle['vehicleModel'] as String? ??
+              '';
+          _vehicleNumber =
+              vehicle['licence_number'] as String? ??
+              vehicle['vehicleNumber'] as String? ??
+              '';
+          _vehicleType =
+              vehicle['vehicleType'] as String? ??
+              vehicle['car_colour'] as String? ??
+              '';
         }
-
-        // Populate controllers
         _nameCtrl.text = _userName;
         _phoneCtrl.text = _userPhone;
         _addressCtrl.text = _userAddress;
@@ -140,7 +134,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         'address': _addressCtrl.text.trim(),
         'blood_group': _bloodGroupCtrl.text.trim(),
       });
-
       if (_vehicleModelCtrl.text.trim().isNotEmpty ||
           _vehicleNumberCtrl.text.trim().isNotEmpty ||
           _vehicleTypeCtrl.text.trim().isNotEmpty) {
@@ -155,7 +148,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     } catch (e) {
       // Non-fatal
     }
-
     if (mounted) {
       setState(() {
         _isEditing = false;
@@ -188,14 +180,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: child,
     ),
   );
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _C.bg,
       body: Stack(
         children: [
-          // Ambient glows
           Positioned(
             top: -80,
             right: -70,
@@ -206,57 +196,35 @@ class _ProfileScreenState extends State<ProfileScreen>
             left: -60,
             child: _Glow(color: _C.purple, size: 200, opacity: 0.07),
           ),
-
           SafeArea(
             child: CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
-                // ── Header (gradient bg) ───────────
                 SliverToBoxAdapter(child: _fs(0, _buildProfileHeader())),
-
-                // ── Stats strip ────────────────────
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
                     child: _fs(1, _buildStatsStrip()),
                   ),
                 ),
-
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 22),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      // Personal Info
                       _fs(2, _buildPersonalInfo()),
                       const SizedBox(height: 14),
-
-                      // Vehicle Info
                       _fs(3, _buildVehicleInfo()),
                       const SizedBox(height: 14),
-
-                      // Save button (visible in edit mode)
-                      if (_isEditing)
-                        _fs(3, _buildSaveButton()),
-                      if (_isEditing)
-                        const SizedBox(height: 14),
-
-                      // System info
+                      if (_isEditing) _fs(3, _buildSaveButton()),
+                      if (_isEditing) const SizedBox(height: 14),
                       _fs(3, _buildSystemInfo()),
                       const SizedBox(height: 14),
-
-                      // Notifications
                       _fs(4, _buildNotifications()),
                       const SizedBox(height: 14),
-
-                      // Account settings
                       _fs(5, _buildAccountSettings()),
                       const SizedBox(height: 14),
-
-                      // Logout
                       _fs(6, _buildLogoutButton()),
                       const SizedBox(height: 10),
-
-                      // Version
                       _fs(
                         7,
                         Center(
@@ -278,7 +246,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Profile Header ───────────────────────
   Widget _buildProfileHeader() {
     return Container(
       decoration: const BoxDecoration(
@@ -291,7 +258,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       padding: const EdgeInsets.fromLTRB(22, 14, 22, 24),
       child: Column(
         children: [
-          // Topbar
           Row(
             children: [
               const Text(
@@ -310,8 +276,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             ],
           ),
           const SizedBox(height: 24),
-
-          // Avatar
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -371,7 +335,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             ],
           ),
           const SizedBox(height: 14),
-
           Text(
             _userName.isNotEmpty ? _userName : 'User',
             style: TextStyle(
@@ -387,8 +350,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             style: TextStyle(fontSize: 11, color: _C.textSecondary),
           ),
           const SizedBox(height: 12),
-
-          // Badges
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -419,7 +380,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Stats Strip ──────────────────────────
   Widget _buildStatsStrip() {
     return Container(
       decoration: BoxDecoration(
@@ -458,7 +418,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Personal Info ────────────────────────
   Widget _buildPersonalInfo() {
     return _DashCard(
       title: 'Personal Info',
@@ -534,7 +493,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Vehicle Info ─────────────────────────
   Widget _buildVehicleInfo() {
     return _DashCard(
       title: 'Vehicle Info',
@@ -591,7 +549,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Save Button ─────────────────────────
   Widget _buildSaveButton() {
     return GestureDetector(
       onTap: _isSaving ? null : _saveProfile,
@@ -639,7 +596,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── System Info ──────────────────────────
   Widget _buildSystemInfo() {
     return _DashCard(
       title: 'System Info',
@@ -672,7 +628,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Notifications ────────────────────────
   Widget _buildNotifications() {
     return _DashCard(
       title: 'Notifications',
@@ -714,7 +669,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Account Settings ─────────────────────
   Widget _buildAccountSettings() {
     return _DashCard(
       title: 'Account',
@@ -748,7 +702,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Logout Button ────────────────────────
   Widget _buildLogoutButton() {
     return GestureDetector(
       onTap: () async {
@@ -786,10 +739,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 }
-
-// ═════════════════════════════════════════
-// Reusable Sub-Widgets
-// ═════════════════════════════════════════
 
 class _Glow extends StatelessWidget {
   final Color color;
@@ -901,7 +850,6 @@ class _DashCard extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
   final Widget child;
-
   const _DashCard({
     required this.title,
     required this.icon,
@@ -911,7 +859,6 @@ class _DashCard extends StatelessWidget {
     this.onAction,
     required this.child,
   });
-
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(18),
@@ -970,7 +917,6 @@ class _InfoRow extends StatelessWidget {
   final Color iconBg;
   final String label, value;
   final bool isLast;
-
   const _InfoRow({
     required this.icon,
     required this.iconBg,
@@ -978,7 +924,6 @@ class _InfoRow extends StatelessWidget {
     required this.value,
     this.isLast = false,
   });
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -1047,7 +992,6 @@ class _EditableRow extends StatelessWidget {
   final TextEditingController controller;
   final TextInputType keyboardType;
   final bool isLast;
-
   const _EditableRow({
     required this.icon,
     required this.iconBg,
@@ -1056,7 +1000,6 @@ class _EditableRow extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.isLast = false,
   });
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -1124,9 +1067,7 @@ class _EditableRow extends StatelessWidget {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: _C.blueLight,
-                          ),
+                          borderSide: const BorderSide(color: _C.blueLight),
                         ),
                       ),
                     ),
@@ -1154,7 +1095,6 @@ class _ToggleRow extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
   final bool isLast;
-
   const _ToggleRow({
     required this.icon,
     required this.iconBg,
@@ -1165,7 +1105,6 @@ class _ToggleRow extends StatelessWidget {
     required this.onChanged,
     this.isLast = false,
   });
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -1261,7 +1200,6 @@ class _TapRow extends StatelessWidget {
   final Color iconBg;
   final String title, subtitle;
   final bool isLast, isDanger;
-
   const _TapRow({
     required this.icon,
     required this.iconBg,
@@ -1270,7 +1208,6 @@ class _TapRow extends StatelessWidget {
     this.isLast = false,
     this.isDanger = false,
   });
-
   @override
   Widget build(BuildContext context) {
     return Column(

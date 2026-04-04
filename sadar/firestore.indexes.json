@@ -6,7 +6,7 @@
   //     "collectionGroup": "widgets",
   //     "queryScope": "COLLECTION",
   //     "fields": [
-  //       { "fieldPath": "foo", "arrayConfig": "CONTAINS" },
+  //       { "fieldPath": "foo",   "arrayConfig": "CONTAINS" },
   //       { "fieldPath": "bar", "mode": "DESCENDING" }
   //     ]
   //   },
