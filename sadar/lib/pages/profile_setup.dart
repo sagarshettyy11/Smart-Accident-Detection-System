@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sadar/pages/contacts_setup.dart';
 import 'package:sadar/services/firestore_service.dart';
 
-// ─────────────────────────────────────────
-// Color Constants
-// ─────────────────────────────────────────
 class _C {
   static const bg = Color(0xFF060E1D);
   static const bluePrimary = Color(0xFF1A56DB);
@@ -18,28 +15,22 @@ class _C {
   static const border = Color(0x263B82F6);
 }
 
-// ─────────────────────────────────────────
-// Profile Setup Screen  (Step 2 of 3)
-// ─────────────────────────────────────────
 class ProfileSetupScreen extends StatefulWidget {
   final VoidCallback? onBack;
   final VoidCallback? onContinue;
   final VoidCallback? onSkip;
-
   const ProfileSetupScreen({
     super.key,
     this.onBack,
     this.onContinue,
     this.onSkip,
   });
-
   @override
   State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
 }
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     with TickerProviderStateMixin {
-  // Personal
   final _firstNameCtrl = TextEditingController();
   final _dobCtrl = TextEditingController();
   final _nationalIdCtrl = TextEditingController();
@@ -48,19 +39,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
   final _allergiesCtrl = TextEditingController();
   String? _selectedGender;
   String? _selectedBloodGroup;
-
-  // Vehicle
   final _carModelCtrl = TextEditingController();
   final _licenceCtrl = TextEditingController();
   final _rcCtrl = TextEditingController();
   final _yearCtrl = TextEditingController();
   String? _selectedCarColour;
-
   bool _isLoading = false;
-
   late AnimationController _fadeCtrl;
   late List<Animation<double>> _anims;
-
   final _genderOptions = ['Male', 'Female', 'Other'];
   final _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
   final _carColourOptions = [
@@ -72,7 +58,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     'Grey',
     'Other',
   ];
-
   @override
   void initState() {
     super.initState();
@@ -131,8 +116,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
 
   Future<void> _handleContinue() async {
     setState(() => _isLoading = true);
-
-    // Attempt to save profile data (best-effort — navigate even if it fails)
     try {
       await FirestoreService.saveUserProfile({
         'full_name': _firstNameCtrl.text.trim(),
